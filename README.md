@@ -3,7 +3,7 @@
 Petite application personnelle (iPhone + ordinateur) pour :
 
 - **Rangement** : noter où sont rangées tes affaires (« la tente dans l'armoire de la terrasse ») et les retrouver par recherche.
-- **Lieux** : créer ses rangements (armoire, tiroir, étagère…) classés par pièce, et voir ce que contient chacun.
+- **Lieux** : rangements classés par pièce et **imbriqués** (armoire › carton › boîte…), avec un type (armoire, carton, sac…). Un objet peut aussi être un contenant (sac à dos, valise) tout en restant dans la Galerie. La recherche affiche le chemin complet.
 - **Galerie** : tous tes objets en photos, filtrables par catégorie (Camping, Outils de jardin…) ; un appui ouvre la fiche complète.
 - **Courses** : photographie un ticket de caisse → la liste des articles achetés avec la date. Chaque article a un bouton « Il en reste / Fini » pour savoir s'il faut en racheter.
 - **À surveiller** (accueil) : tâches d'entretien en retard, garanties qui expirent, produits bientôt périmés, objets prêtés depuis longtemps, articles à acheter.

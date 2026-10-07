@@ -640,14 +640,16 @@ function optionsHTML(groups, current, placeholder, newLabel){
 }
 function roomGroups(){ return [{options:live(S.data.rooms).sort(byName).map(r=>r.name)}]; }
 function catGroups(){ return [{options:live(S.data.cats).sort((a,b)=>(a.name==="Divers")-(b.name==="Divers")||byName(a,b)).map(c=>c.name), fmt:v=>catIcon(v)+"  "+v}]; }
-function placeGroups(){
-  const declared = live(S.data.places), groups = {};
-  for(const p of declared) (groups[p.room||"Sans pièce"] ||= []).push(p.name);
-  const declaredNames = new Set(declared.map(p=>p.name));
-  const loose = [...new Set(live(S.data.items).map(i=>i.location).filter(l=>l && !declaredNames.has(l)))];
+function placeGroups(exclude){
+  const ex=new Set(exclude||[]), groups={};
+  const list=live(S.data.places).filter(p=>!ex.has(p.id)).map(p=>({p, key:[...ancestors(p).map(a=>a.name),p.name].join("\u0001")})).sort((a,b)=>a.key.localeCompare(b.key,"fr"));
+  for(const {p} of list) (groups[placeRoom(p)||"Sans pièce"] ||= []).push(p.name);
+  const declaredNames = new Set(live(S.data.places).map(p=>p.name));
+  const loose = [...new Set(live(S.data.items).map(i=>i.location).filter(l=>l && !declaredNames.has(l)))].sort((a,b)=>a.localeCompare(b,"fr"));
   if(loose.length) groups["Non classés"] = loose;
   const rank = x => x==="Non classés"?2 : x==="Sans pièce"?1 : 0;
-  return Object.keys(groups).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b,"fr")).map(g=>({label:g, options:groups[g].sort((a,b)=>a.localeCompare(b,"fr"))}));
+  const fmt = v => { const p=placeByName(v); if(!p) return v; const d=ancestors(p).length; return "　".repeat(d)+(d?"└ ":"")+ptIcon(p.type)+" "+v; };
+  return Object.keys(groups).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b,"fr")).map(g=>({label:g, options:groups[g], fmt}));
 }
 function bindNew(bd, selId, boxId, focusId){
   const sel=bd.querySelector("#"+selId), box=bd.querySelector("#"+boxId);
@@ -749,18 +751,64 @@ function itemCard(i){
     ${phHTML(i)}
     <div class="main">
       <div class="name">${esc(i.name)}</div>
-      <div class="where">📍 ${esc(i.location||"—")}${roomOfPlace(i.location)?` <span class="meta">· ${esc(roomOfPlace(i.location))}</span>`:""}</div>
+      <div class="where">📍 ${esc(pathLabel(i.location)||"—")}${roomOfPlace(i.location)?` <span class="meta">· ${esc(roomOfPlace(i.location))}</span>`:""}</div>
       ${i.category?`<span class="pill">${esc(i.category)}</span>`:""}${statusPills(i)}
       ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
     </div></div>`;
 }
-const roomOfPlace = n => (live(S.data.places).find(p=>p.name===n)||{}).room||"";
+const PTYPES=[["armoire","Armoire","🚪"],["placard","Placard","🚪"],["etagere","Étagère","📚"],["tiroir","Tiroir","🗄️"],["meuble","Meuble","🪑"],["carton","Carton","📦"],["boite","Boîte","🗃️"],["sac","Sac","🎒"],["valise","Valise","🧳"],["autre","Autre","📍"]];
+const ptIcon = t => (PTYPES.find(x=>x[0]===t)||[0,0,"🗄️"])[2];
+const ptLabel = t => (PTYPES.find(x=>x[0]===t)||[0,"Rangement"])[1];
+const placeById = id => id ? live(S.data.places).find(p=>p.id===id) || null : null;
+const placeByName = n => n ? (live(S.data.places).find(p=>p.name===n) || live(S.data.places).find(p=>norm(p.name)===norm(n)) || null) : null;
+function parentOf(p){ const q=placeById(p?.parent); return q && q!==p ? q : null; }
+function ancestors(p){ const out=[], seen=new Set([p.id]); let c=parentOf(p); while(c && !seen.has(c.id)){ out.unshift(c); seen.add(c.id); c=parentOf(c); } return out; }
+function placeRoom(p){ if(!p) return ""; const a=ancestors(p); return (a[0]||p).room||""; }
+const roomOfPlace = n => placeRoom(placeByName(n));
+function pathOf(name){ const p=placeByName(name); if(!p) return name?[name]:[]; return [...ancestors(p).map(x=>x.name), p.name]; }
+const pathLabel = name => pathOf(name).join(" › ");
+function children(p){ return live(S.data.places).filter(x=>x.parent===p.id && x!==p); }
+function descendants(p){ const out=[], st=[p], seen=new Set([p.id]); while(st.length){ const c=st.pop(); for(const k of children(c)) if(!seen.has(k.id)){ seen.add(k.id); out.push(k); st.push(k); } } return out; }
+function itemsIn(name){ return live(S.data.items).filter(i=>i.location && norm(i.location)===norm(name)); }
+function countDeep(p){ return itemsIn(p.name).length + descendants(p).reduce((n,d)=>n+itemsIn(d.name).length, 0); }
+const linkedPlace = i => i ? (live(S.data.places).find(p=>p.itemId===i.id) || null) : null;
+const plural = (n, w) => `${n} ${w}${n>1?"s":""}`;
+/* objet-contenant : un rangement lié suit l'objet (nom, emplacement) */
+function syncContainer(it, want){
+  let lp = linkedPlace(it); const now=Date.now();
+  if(want){
+    if(!lp){
+      const clash = live(S.data.places).find(p=>norm(p.name)===norm(it.name) && !p.itemId);
+      if(clash){ clash.itemId=it.id; lp=clash; }
+      else { lp={id:uid(), name:it.name, type:/valise/i.test(it.name)?"valise":/bo[iî]te/i.test(it.name)?"boite":/carton/i.test(it.name)?"carton":"sac", itemId:it.id, notes:"", updatedAt:now}; S.data.places.push(lp); }
+    }
+    const old = lp.name, par = placeByName(it.location);
+    lp.name = it.name;
+    lp.parent = par && par!==lp && !descendants(lp).includes(par) ? par.id : null;
+    if(lp.parent) lp.room = "";
+    lp.updatedAt = now;
+    if(old!==it.name) for(const i of itemsIn(old)) if(i!==it){ i.location=it.name; i.updatedAt=now; }
+  } else if(lp) releaseContainer(it);
+}
+function releaseContainer(it){
+  const lp=linkedPlace(it); if(!lp) return; const now=Date.now(), room=placeRoom(lp);
+  for(const i of itemsIn(lp.name)) if(i!==it){ i.location = it.location||""; i.updatedAt=now; }
+  for(const k of children(lp)){ k.parent = lp.parent||null; if(!k.parent) k.room = room; k.updatedAt=now; }
+  lp.deleted=true; lp.updatedAt=now;
+}
+/* menu « Rangé dans » (valeurs = identifiants) */
+function placeIdOptions(exclude, current){
+  const ex=new Set(exclude||[]), groups={};
+  const list=live(S.data.places).filter(p=>!ex.has(p.id)).map(p=>({p, key:[...ancestors(p).map(a=>a.name),p.name].join("\u0001")})).sort((a,b)=>a.key.localeCompare(b.key,"fr"));
+  for(const {p} of list) (groups[placeRoom(p)||"Sans pièce"] ||= []).push(p);
+  return Object.keys(groups).sort((a,b)=>(a==="Sans pièce")-(b==="Sans pièce")||a.localeCompare(b,"fr")).map(g=>`<optgroup label="${esc(g)}">${groups[g].map(p=>{ const d=ancestors(p).length; return `<option value="${p.id}"${p.id===current?" selected":""}>${"　".repeat(d)}${d?"└ ":""}${ptIcon(p.type)} ${esc(p.name)}</option>`; }).join("")}</optgroup>`).join("");
+}
 
 function render(){
   if(!S.data) return;
   const q = $("q").value;
   const items = live(S.data.items), infos = live(S.data.infos);
-  const itemHay = i => [i.name, i.location, roomOfPlace(i.location), i.category, i.notes, i.loan?.to||""];
+  const itemHay = i => [i.name, pathLabel(i.location), roomOfPlace(i.location), i.category, i.notes, i.loan?.to||""];
   const al = getAlerts();
   const nLate = al.filter(a=>a.kind==="task" && a.lv!=="ok").length;
   $("homeBadge").textContent = nLate; $("homeBadge").classList.toggle("hidden", !nLate);
@@ -774,30 +822,35 @@ function render(){
   }
 
   if(tab==="places"){
-    const declared = live(S.data.places);
-    const map = new Map();
-    for(const p of declared) map.set(norm(p.name), {place:p, name:p.name, room:p.room||"", items:[]});
-    for(const i of items){
-      const k = norm(i.location||"Sans lieu");
-      if(!map.has(k)) map.set(k, {place:null, name:i.location||"Sans lieu", room:"", items:[]});
-      map.get(k).items.push(i);
-    }
-    placeIndex = map;
-    const entries = [...map.entries()].filter(([k,e])=> !q || matches(q, e.name, e.room, e.place?.notes||"") || e.items.some(i=>matches(q, i.name, i.notes)));
+    const declared = live(S.data.places), declNames = new Set(declared.map(p=>norm(p.name)));
+    const hitItem = i => matches(q, i.name, i.notes||"");
+    const hit = p => !q || matches(q, p.name, p.notes||"", placeRoom(p)) || itemsIn(p.name).some(hitItem) || descendants(p).some(d=>matches(q,d.name)||itemsIn(d.name).some(hitItem));
     const groups = {};
-    for(const [k,e] of entries) (groups[e.room||"Sans pièce"] ||= []).push([k,e]);
-    const gkeys = Object.keys(groups).sort((a,b)=> (a==="Sans pièce")-(b==="Sans pièce") || a.localeCompare(b,"fr"));
+    for(const p of declared.filter(p=>!parentOf(p))) if(hit(p)) (groups[placeRoom(p)||"Sans pièce"] ||= []).push({p});
+    placeIndex = new Map();
+    const loose = {}; for(const i of items) if(i.location && !declNames.has(norm(i.location))) (loose[i.location] ||= []).push(i);
+    for(const [n,arr] of Object.entries(loose)) if(!q || matches(q,n) || arr.some(hitItem)){ placeIndex.set(norm(n), n); (groups["Non classés"] ||= []).push({loose:n, items:arr}); }
+    const rank = g => g==="Non classés"?2 : g==="Sans pièce"?1 : 0;
+    const gkeys = Object.keys(groups).sort((a,b)=>rank(a)-rank(b) || a.localeCompare(b,"fr"));
+    const itemRow = i => { const lp=linkedPlace(i);
+      return `<div class="sub" ${lp?`data-place="${lp.id}"`:`data-open="${i.id}"`}>${phHTML(i,"sm")}<span class="name">${esc(i.name)}</span>${lp?`<span class="meta">· contient ${countDeep(lp)} ›</span>`:""}</div>`; };
+    const card = p => { const kids=children(p).filter(c=>!c.itemId).sort(byName), its=itemsIn(p.name).sort(byName);
+      return `<div class="card">
+        <div class="place-head" data-place="${p.id}"><div class="main">
+          <div class="name">${ptIcon(p.type)} ${esc(p.name)}</div>
+          <div class="meta">${plural(countDeep(p),"objet")}${kids.length?` · ${plural(kids.length,"rangement")} dedans`:""}${p.notes?" · "+esc(p.notes):""}</div>
+        </div><span class="meta" style="font-size:20px">›</span></div>
+        ${kids.map(c=>`<div class="sub" data-place="${c.id}"><span style="font-size:18px;width:34px;text-align:center">${ptIcon(c.type)}</span><span class="name">${esc(c.name)}</span><span class="meta">· ${countDeep(c)} ›</span></div>`).join("")}
+        ${its.map(itemRow).join("")}
+        <button class="btn ghost small" style="margin-top:10px" data-addin="${esc(p.name)}">+ Ajouter un objet ici</button>
+      </div>`; };
+    const looseCard = e => `<div class="card">
+        <div class="place-head" data-pkey="${esc(norm(e.loose))}"><div class="main"><div class="name">📍 ${esc(e.loose)}</div>
+        <div class="meta">${plural(e.items.length,"objet")} · appuie pour créer ce rangement</div></div><span class="meta">✏️</span></div>
+        ${e.items.sort(byName).map(itemRow).join("")}</div>`;
     $("placesList").innerHTML = gkeys.length ? gkeys.map(g=>`
       <div class="group"><h3>${esc(g)}</h3><div class="list" style="margin-top:0">
-      ${groups[g].sort((a,b)=>a[1].name.localeCompare(b[1].name,"fr")).map(([k,e])=>`
-        <div class="card">
-          <div class="place-head" data-pkey="${esc(k)}"><div class="main">
-            <div class="name">📦 ${esc(e.name)}</div>
-            <div class="meta">${e.items.length} objet${e.items.length>1?"s":""}${e.place?.notes?" · "+esc(e.place.notes):""}</div>
-          </div><span class="meta">✏️</span></div>
-          ${e.items.sort(byName).map(i=>`<div class="sub" data-open="${i.id}">${phHTML(i,"sm")}<span class="name">${esc(i.name)}</span>${i.notes?`<span class="meta">· ${esc(i.notes)}</span>`:""}</div>`).join("")}
-          <button class="btn ghost small" style="margin-top:10px" data-addin="${esc(e.name)}">+ Ajouter un objet ici</button>
-        </div>`).join("")}
+      ${groups[g].sort((a,b)=>(a.p?.name||a.loose).localeCompare(b.p?.name||b.loose,"fr")).map(e=>e.p?card(e.p):looseCard(e)).join("")}
       </div></div>`).join("")
       : `<div class="empty">${q?"Aucun rangement trouvé.":"Aucun rangement pour l'instant.<br>Appuie sur + pour créer ton premier rangement."}</div>`;
     hydratePhotos($("placesList"));
@@ -948,7 +1001,8 @@ function openDetail(it){
   modal(`<div class="hero" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}" data-kind="full">`:""}</div>
     <h2>${esc(it.name)}</h2>
     <div class="kv">
-      <div class="k">Rangement</div><div><strong>📍 ${esc(it.location||"—")}</strong></div>
+      <div class="k">Rangement</div><div><strong>📍 ${esc(pathLabel(it.location)||"—")}</strong></div>
+      ${linkedPlace(it)?`<div class="k">Contient</div><div>${plural(countDeep(linkedPlace(it)),"objet")} <button class="btn ghost small" id="dCont" style="margin-left:6px">Voir le contenu</button></div>`:""}
       <div class="k">Pièce</div><div>${esc(room||"—")}</div>
       <div class="k">Catégorie</div><div>${it.category?esc(catIcon(it.category)+" "+it.category):"—"}</div>
       ${it.notes?`<div class="k">Précisions</div><div>${esc(it.notes)}</div>`:""}
@@ -968,6 +1022,7 @@ function openDetail(it){
       loadPhotoURL(it.photo.id,"full").then(u=>{ if(u){ img.src=u; img.classList.add("ok","full"); } }); }
     bd.querySelector("#dClose").onclick=close;
     bd.querySelector("#dEdit").onclick=()=>openItem(it);
+    const dc=bd.querySelector("#dCont"); if(dc) dc.onclick=()=>openPlaceView(linkedPlace(it));
     bd.querySelectorAll("#dInv img").forEach(()=>hydratePhotos(bd.querySelector("#dInv")));
     const inv=bd.querySelector("#dInv"); if(inv) inv.onclick=()=>openImage(it.invoice.id, "Facture · "+it.name);
     const repl=bd.querySelector("#dRepl"); if(repl) repl.onclick=()=>openReplace(it);
@@ -1006,14 +1061,16 @@ function openItem(existing){
       <button class="btn danger small${it?.photo?"":" hidden"}" id="fPhDel">Retirer</button></div>
       <input type="file" id="fPhFile" accept="image/*" class="hidden">
     </div>
-    <label>Où est-il rangé ?</label><select class="field" id="fLoc">${optionsHTML(placeGroups(), existing?.location||"", "— Choisir un rangement —", "Nouveau rangement")}</select>
+    <label>Où est-il rangé ?</label><select class="field" id="fLoc">${optionsHTML(placeGroups(it&&linkedPlace(it)?[linkedPlace(it).id, ...descendants(linkedPlace(it)).map(d=>d.id)]:[]), existing?.location||"", "— Choisir un rangement —", "Nouveau rangement")}</select>
     <div id="fNewBox" class="newbox hidden">
       <label>Nom du nouveau rangement</label><input class="field" id="fNewName" value="${esc(existing?.newLocName||"")}" placeholder="ex. Armoire de la terrasse">
-      <label>Pièce</label><select class="field" id="fNewRoom">${optionsHTML(roomGroups(), "", "— Choisir une pièce —", "Nouvelle pièce")}</select>
-      <div id="fNewRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="fNewRoomName" placeholder="ex. Véranda"></div>
+      <label>Rangé dans</label><select class="field" id="fNewParent"><option value="">— Directement dans une pièce —</option>${placeIdOptions(it&&linkedPlace(it)?[linkedPlace(it).id, ...descendants(linkedPlace(it)).map(d=>d.id)]:[], "")}</select>
+      <div id="fNewRoomWrap"><label>Pièce</label><select class="field" id="fNewRoom">${optionsHTML(roomGroups(), "", "— Choisir une pièce —", "Nouvelle pièce")}</select>
+      <div id="fNewRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="fNewRoomName" placeholder="ex. Véranda"></div></div>
     </div>
     <label>Catégorie</label><select class="field" id="fCat">${optionsHTML(catGroups(), existing?.category||"", "— Choisir une catégorie —", "Nouvelle catégorie")}</select>
     <div id="fCatBox" class="newbox hidden"><label>Nom de la nouvelle catégorie</label><input class="field" id="fCatName" placeholder="ex. Matériel de plongée"></div>
+    <label class="chkline"><input type="checkbox" id="fCont"${it&&linkedPlace(it)?" checked":""}> Cet objet contient d'autres choses (sac, valise, boîte…)</label>
     <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
     <details class="more"${hasMore?" open":""}><summary>Prêt, garantie, péremption</summary>
       <label>Prêté à (laisser vide si chez toi)</label>${dfield("fLoanTo", existing?.loan?.to||"", "text", "ex. Julien")}
@@ -1040,6 +1097,7 @@ function openItem(existing){
     const sel=bd.querySelector("#fLoc");
     if(existing?.newLocName || noPlaces) sel.value="__new";
     bindNew(bd,"fLoc","fNewBox","fNewName"); bindNew(bd,"fNewRoom","fNewRoomBox","fNewRoomName"); bindNew(bd,"fCat","fCatBox","fCatName");
+    const fnp=bd.querySelector("#fNewParent"); fnp.onchange=()=>bd.querySelector("#fNewRoomWrap").classList.toggle("hidden", !!fnp.value);
     hydratePhotos(bd);
     const ph=bd.querySelector("#fPh"), file=bd.querySelector("#fPhFile");
     bd.querySelector("#fPhBtn").onclick=()=>file.click();
@@ -1096,10 +1154,11 @@ function openItem(existing){
       if(location==="__new"){
         const nn=cap(bd.querySelector("#fNewName").value.trim());
         if(!nn) return bd.querySelector("#fNewName").focus();
-        const room = readRoom(bd,"fNewRoom","fNewRoomName");
+        const parent = bd.querySelector("#fNewParent").value || null;
+        const room = parent ? "" : readRoom(bd,"fNewRoom","fNewRoomName");
         const ex=findPlace(nn);
-        if(ex){ location=ex.name; if(room && !ex.room){ ex.room=room; ex.updatedAt=Date.now(); } toast(`Rangement existant utilisé : ${ex.name}`); }
-        else { S.data.places.push({id:uid(),name:nn,room,notes:"",updatedAt:Date.now()}); location=nn; }
+        if(ex){ location=ex.name; if(room && !ex.room && !ex.parent){ ex.room=room; ex.updatedAt=Date.now(); } toast(`Rangement existant utilisé : ${ex.name}`); }
+        else { S.data.places.push({id:uid(),name:nn,type:parent?"carton":"armoire",parent,room,notes:"",updatedAt:Date.now()}); location=nn; }
       }
       let category = bd.querySelector("#fCat").value;
       if(category==="__new") category = ensureCat(bd.querySelector("#fCatName").value);
@@ -1127,43 +1186,62 @@ function openItem(existing){
       const loanTo = cap(bd.querySelector("#fLoanTo").value.trim());
       const loan = loanTo ? {to:loanTo, date: dv("#fLoanDate") || target?.loan?.date || Date.now(), returnBy: bd.querySelector("#fRetOn").checked ? dv("#fRetDate") : null} : null;
       const fields = {name, location, category, notes, photo, invoice, loan, purchaseDate:dv("#fBuy"), warrantyEnd:dv("#fWar"), expiry:dv("#fExp"), updatedAt:Date.now()};
-      if(target) Object.assign(target, fields); else S.data.items.push({id:uid(), ...fields});
+      if(target) Object.assign(target, fields); else { target={id:uid(), ...fields}; S.data.items.push(target); }
+      const wantCont = bd.querySelector("#fCont").checked;
+      if(!wantCont && linkedPlace(target) && countDeep(linkedPlace(target)) && !confirm(`« ${target.name} » contient encore des objets. Ils seront déplacés ${target.location?`dans « ${target.location} »`:"hors rangement"}. Continuer ?`)) return;
+      syncContainer(target, wantCont);
       touch(); close(); $("quickIn").value=""; render();
     };
-    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); it.deleted=true; it.photo=null; it.invoice=null; it.updatedAt=Date.now(); touch(); close(); render(); } };
+    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ releaseContainer(it); if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); it.deleted=true; it.photo=null; it.invoice=null; it.updatedAt=Date.now(); touch(); close(); render(); } };
   });
 }
 
 /* formulaire rangement */
-function openPlace(p, presetName){
+function openPlace(p, presetName, presetParent){
+  const excl = p ? [p.id, ...descendants(p).map(d=>d.id)] : [];
+  const curParent = p ? (parentOf(p)?.id||"") : (presetParent||"");
   modal(`${sheetHead("place","Rangement", p?"Modifier le rangement":"Nouveau rangement", true)}
-    <label>Nom du rangement</label><input class="field" id="pName" value="${esc(p?.name||presetName||"")}" placeholder="ex. Armoire de la terrasse">
-    <label>Pièce</label><select class="field" id="pRoom">${optionsHTML(roomGroups(), p?.room||"", "— Choisir une pièce —", "Nouvelle pièce")}</select>
-    <div id="pRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="pRoomName" placeholder="ex. Véranda"></div>
+    <label>Nom du rangement</label><input class="field" id="pName" value="${esc(p?.name||presetName||"")}" placeholder="ex. Armoire de la terrasse, Carton camping">
+    <label>Type</label><select class="field" id="pType">${PTYPES.map(([v,l,ic])=>`<option value="${v}"${(p?.type||(curParent?"carton":"armoire"))===v?" selected":""}>${ic}  ${l}</option>`).join("")}</select>
+    <label>Rangé dans</label><select class="field" id="pParent"><option value="">— Directement dans une pièce —</option>${placeIdOptions(excl, curParent)}</select>
+    <div id="pRoomWrap"><label>Pièce</label><select class="field" id="pRoom">${optionsHTML(roomGroups(), p?.room||"", "— Choisir une pièce —", "Nouvelle pièce")}</select>
+    <div id="pRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="pRoomName" placeholder="ex. Véranda"></div></div>
+    <div class="hint" id="pRoomHint"></div>
     <label>Description (facultatif)</label><textarea class="field" id="pNotes" placeholder="ex. grande armoire blanche, 3 étagères">${esc(p?.notes||"")}</textarea>
     <div class="actions">${p?`<button class="btn danger" id="pDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="pCancel">Annuler</button><button class="btn" id="pSave">Enregistrer</button></div>`,
   (bd, close)=>{
     bindNew(bd,"pRoom","pRoomBox","pRoomName");
-    setTimeout(()=>bd.querySelector(presetName&&!p?"#pRoom":"#pName").focus(), 60);
+    const par=bd.querySelector("#pParent");
+    const upd=()=>{ const pp=placeById(par.value); bd.querySelector("#pRoomWrap").classList.toggle("hidden", !!pp);
+      bd.querySelector("#pRoomHint").textContent = pp ? `Pièce : ${placeRoom(pp)||"—"} (celle de « ${[...ancestors(pp).map(a=>a.name), pp.name].join(" › ")} »)` : ""; };
+    par.onchange=upd; upd();
+    setTimeout(()=>bd.querySelector(presetName&&!p?"#pType":"#pName").focus(), 60);
     bd.querySelector("#pCancel").onclick=close;
     bd.querySelector("#pSave").onclick=()=>{
-      const name=cap(bd.querySelector("#pName").value.trim()), notes=bd.querySelector("#pNotes").value.trim();
+      const name=cap(bd.querySelector("#pName").value.trim()), notes=bd.querySelector("#pNotes").value.trim(), type=bd.querySelector("#pType").value;
       if(!name) return bd.querySelector("#pName").focus();
-      if(bd.querySelector("#pRoom").value==="__new" && !bd.querySelector("#pRoomName").value.trim()) return bd.querySelector("#pRoomName").focus();
-      const room = readRoom(bd,"pRoom","pRoomName");
+      const parent = par.value || null;
+      if(!parent && bd.querySelector("#pRoom").value==="__new" && !bd.querySelector("#pRoomName").value.trim()) return bd.querySelector("#pRoomName").focus();
+      const room = parent ? "" : readRoom(bd,"pRoom","pRoomName");
       const oldName = p?.name || presetName;
       const dup = live(S.data.places).find(x=>x!==p && norm(x.name)===norm(name));
       if(dup && !(oldName && norm(oldName)===norm(name))){ alert("Ce rangement existe déjà."); return; }
       const now = Date.now();
-      if(p) Object.assign(p,{name,room,notes,updatedAt:now});
-      else S.data.places.push({id:uid(),name,room,notes,updatedAt:now});
+      if(p) Object.assign(p,{name,type,parent,room,notes,updatedAt:now});
+      else S.data.places.push({id:uid(),name,type,parent,room,notes,updatedAt:now});
       if(oldName && norm(oldName)!==norm(name)) for(const i of live(S.data.items)) if(norm(i.location)===norm(oldName)){ i.location=name; i.updatedAt=now; }
       normalizeLocations(); touch(); close(); render();
+      const np = p || S.data.places[S.data.places.length-1]; if(parent || presetParent) openPlaceView(placeById(parent) || np);
     };
     if(p) bd.querySelector("#pDel").onclick=()=>{
-      const n = live(S.data.items).filter(i=>norm(i.location)===norm(p.name)).length;
-      if(confirm(`Supprimer le rangement « ${p.name} » ?`+(n?`\nLes ${n} objet(s) rangés ici garderont cet emplacement.`:""))){ p.deleted=true; p.updatedAt=Date.now(); touch(); close(); render(); }
+      const kids=children(p), its=itemsIn(p.name), up=parentOf(p);
+      const dest = up ? `dans « ${up.name} »` : "sans rangement (objets) / directement dans la pièce (rangements)";
+      if(!confirm(`Supprimer le rangement « ${p.name} » ?` + (kids.length||its.length ? `\n\nSon contenu (${plural(its.length,"objet")}, ${plural(kids.length,"rangement")}) sera déplacé ${dest}.` : ""))) return;
+      const now=Date.now(), room=placeRoom(p);
+      for(const i of its){ i.location = up ? up.name : ""; i.updatedAt=now; }
+      for(const k of kids){ k.parent = up ? up.id : null; if(!up) k.room = room; k.updatedAt=now; }
+      p.deleted=true; p.updatedAt=now; touch(); close(); render();
     };
   });
 }
@@ -1525,7 +1603,7 @@ function openTrash(it){
       const now=Date.now();
       if(bd.querySelector("#trShop").checked) addToShop(it.name);
       if(keep) Object.assign(it, {expiry:null, restock:now, updatedAt:now});
-      else { if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); Object.assign(it, {deleted:true, photo:null, invoice:null, updatedAt:now}); }
+      else { releaseContainer(it); if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); Object.assign(it, {deleted:true, photo:null, invoice:null, updatedAt:now}); }
       touch(); close(); render(); toast(keep ? `${it.name} : à racheter` : `${it.name} supprimé`);
     };
   });
@@ -1657,19 +1735,32 @@ function markTaskDone(t){
 }
 
 /* ================= RANGEMENTS : VUE, ÉTIQUETTE QR, SCAN ================= */
-function placeEntry(p){ return {place:p, name:p.name, room:p.room||"", items:live(S.data.items).filter(i=>norm(i.location)===norm(p.name))}; }
-function openPlaceById(id){ const p=live(S.data.places).find(x=>x.id===id); if(!p) return false; openPlaceView(placeEntry(p)); return true; }
-function openPlaceView(e){
-  modal(`${sheetHead("place","Rangement", esc(e.name), true)}
-    <div class="meta" style="margin:0 0 10px">${esc(e.room||"Sans pièce")} · ${e.items.length} objet${e.items.length>1?"s":""}${e.place?.notes?" · "+esc(e.place.notes):""}</div>
-    <div class="card" style="padding:2px 12px">${e.items.sort(byName).map(i=>`<div class="sub" data-vopen="${i.id}">${phHTML(i,"sm")}<div style="min-width:0"><div class="name">${esc(i.name)}</div>${statusPills(i)}</div></div>`).join("") || `<div class="meta" style="padding:12px 0">Vide pour l'instant.</div>`}</div>
-    <div class="actions"><button class="btn ghost" id="vQr">🏷️ QR</button><span class="spacer"></span><button class="btn ghost" id="vEdit">Modifier</button><button class="btn" id="vAdd">+ Objet</button></div>`,
+function openPlaceById(id){ const p=placeById(id); if(!p) return false; openPlaceView(p); return true; }
+function openPlaceView(p){
+  if(!p) return;
+  const kids=children(p).filter(c=>!c.itemId).sort(byName), its=itemsIn(p.name).sort(byName);
+  const linkedItem = p.itemId ? S.data.items.find(i=>i.id===p.itemId && !i.deleted) : null;
+  const anc = ancestors(p), up = parentOf(p);
+  const crumbs = [placeRoom(p)||"Sans pièce", ...anc.map(a=>a.name)].join(" › ");
+  modal(`${sheetHead("place", linkedItem?"Objet contenant":ptLabel(p.type), esc(p.name), true)}
+    <div class="meta" style="margin:0 0 6px">📍 ${esc(crumbs)}${p.notes?" · "+esc(p.notes):""}</div>
+    ${up?`<button class="btn ghost small" id="vUp" style="margin-bottom:6px">↑ ${esc(up.name)}</button>`:""}
+    ${kids.length?`<label>Rangements dedans</label><div class="card" style="padding:2px 12px">${kids.map(c=>`<div class="sub" data-vplace="${c.id}"><span style="font-size:18px;width:34px;text-align:center">${ptIcon(c.type)}</span><div style="min-width:0;flex:1"><div class="name">${esc(c.name)}</div><div class="meta" style="margin:0">${plural(countDeep(c),"objet")}</div></div><span class="meta" style="font-size:20px">›</span></div>`).join("")}</div>`:""}
+    <label>Objets</label>
+    <div class="card" style="padding:2px 12px">${its.map(i=>{ const lp=linkedPlace(i);
+      return `<div class="sub" ${lp?`data-vplace="${lp.id}"`:`data-vopen="${i.id}"`}>${phHTML(i,"sm")}<div style="min-width:0;flex:1"><div class="name">${esc(i.name)}</div>${lp?`<div class="meta" style="margin:0">contient ${plural(countDeep(lp),"objet")} ›</div>`:""}${statusPills(i)}</div></div>`; }).join("") || `<div class="meta" style="padding:12px 0">Aucun objet directement ici.</div>`}</div>
+    <div class="actions"><button class="btn ghost small" id="vQr">🏷️ QR</button>${linkedItem?`<button class="btn ghost small" id="vItem">Fiche de l'objet</button>`:`<button class="btn ghost small" id="vEdit">Modifier</button>`}<span class="spacer"></span>
+      <button class="btn ghost small" id="vSub">+ Rangement</button><button class="btn small" id="vAdd">+ Objet</button></div>`,
   (bd, close)=>{
     hydratePhotos(bd);
     bd.querySelectorAll("[data-vopen]").forEach(x=>x.onclick=()=>{ const i=S.data.items.find(y=>y.id===x.dataset.vopen); if(i) openDetail(i); });
-    bd.querySelector("#vEdit").onclick=()=>openPlace(e.place, e.place?null:e.name);
-    bd.querySelector("#vAdd").onclick=()=>openItem({location:e.name});
-    bd.querySelector("#vQr").onclick=()=>{ if(e.place) openLabel(e.place); else { toast("Enregistre d'abord ce rangement (Modifier) pour créer son étiquette."); } };
+    bd.querySelectorAll("[data-vplace]").forEach(x=>x.onclick=()=>openPlaceView(placeById(x.dataset.vplace)));
+    const u=bd.querySelector("#vUp"); if(u) u.onclick=()=>openPlaceView(up);
+    const ed=bd.querySelector("#vEdit"); if(ed) ed.onclick=()=>openPlace(p);
+    const vi=bd.querySelector("#vItem"); if(vi) vi.onclick=()=>openDetail(linkedItem);
+    bd.querySelector("#vAdd").onclick=()=>openItem({location:p.name});
+    bd.querySelector("#vSub").onclick=()=>openPlace(null, null, p.id);
+    bd.querySelector("#vQr").onclick=()=>openLabel(p);
   });
 }
 async function labelPNG(p, url){
@@ -1687,7 +1778,8 @@ async function labelPNG(p, url){
   const words=p.name.split(" "), lines=[]; let cur="";
   for(const w of words){ const t=cur?cur+" "+w:w; if(g.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; } if(cur) lines.push(cur);
   let y=190; for(const l of lines.slice(0,3)){ g.fillText(l, x, y); y+=sz+10; }
-  if(p.room){ g.fillStyle="#6B7A22"; g.font=font(600,38); g.fillText(p.room, x, y+20); }
+  const where=[placeRoom(p), ...ancestors(p).map(a=>a.name)].filter(Boolean).join(" › ");
+  if(where){ g.fillStyle="#6B7A22"; let fs=38; g.font=font(600,fs); while(g.measureText(where).width>maxW && fs>20){ fs-=2; g.font=font(600,fs); } g.fillText(where, x, y+20); }
   g.fillStyle="#64746D"; g.font=font(400,26); g.fillText("Scanne pour voir le contenu", x, H-60);
   return new Promise(res=>c.toBlob(res, "image/png"));
 }
@@ -1884,7 +1976,8 @@ document.addEventListener("click", e=>{
   const t = e.target;
   let el;
   if(el=t.closest("[data-addin]")) return openItem({location:el.dataset.addin});
-  if(el=t.closest(".place-head[data-pkey]")){ const en=placeIndex.get(el.dataset.pkey); if(en) openPlaceView(en); return; }
+  if(el=t.closest("[data-place]")){ openPlaceView(placeById(el.dataset.place)); return; }
+  if(el=t.closest(".place-head[data-pkey]")){ const n=placeIndex.get(el.dataset.pkey); if(n) openPlace(null, n); return; }
   if(el=t.closest("[data-alert]")){ const [k,id]=el.dataset.alert.split(/:(.*)/);
     if(k==="task"){ const x=S.data.tasks.find(y=>y.id===id); if(x) openTask(x); }
     else if(k==="shop"){ shopView="list"; $("q").value=""; setTab("courses"); }
