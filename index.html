@@ -15,14 +15,14 @@
 <style>
 :root{
   --bg:#f5f3ee; --card:#ffffff; --text:#1d2421; --muted:#6b736f; --line:#e3e0d8;
-  --accent:#1f6f5c; --accent-soft:#dcebe5; --danger:#b3402f; --warn:#a86b00;
-  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+  --accent:#1f6f5c; --accent-soft:#dcebe5; --danger:#b3402f; --danger-soft:#f6e1dc; --warn:#a86b00;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05); --ph:#ece8df;
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#121614; --card:#1c2220; --text:#e8ece9; --muted:#9aa49f; --line:#2c3431;
-    --accent:#5cc2a3; --accent-soft:#1f3a32; --danger:#ff8a75; --warn:#f0b54a;
-    --shadow:none;
+    --accent:#5cc2a3; --accent-soft:#1f3a32; --danger:#ff8a75; --danger-soft:#3a2420; --warn:#f0b54a;
+    --shadow:none; --ph:#252c29;
   }
 }
 *{box-sizing:border-box}
@@ -32,31 +32,30 @@ body{min-height:100vh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 button,input,textarea,select{font:inherit;color:inherit}
 .hidden{display:none!important}
 .wrap{max-width:720px;margin:0 auto;padding:16px}
-header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;
-  border-bottom:1px solid var(--line)}
-header.top .row{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
+header.top .row{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:6px}
 header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
-.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-right:4px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .dot.ok{background:var(--accent)}.dot.busy{background:var(--warn)}.dot.err{background:var(--danger)}
-.iconbtn{border:0;background:transparent;padding:6px;border-radius:8px;cursor:pointer;color:var(--muted)}
+.iconbtn{border:0;background:transparent;padding:6px;border-radius:8px;cursor:pointer;color:var(--muted);display:flex}
+.iconbtn.on{color:var(--accent)}
 .search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);margin-top:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
 .list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .item{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
 .item .main{flex:1;min-width:0}
-.item .name{font-weight:600}
-.item .where{color:var(--accent);font-size:15px;margin-top:2px}
-.item .meta{color:var(--muted);font-size:13px;margin-top:4px;word-wrap:break-word}
-.sub{display:flex;gap:8px;align-items:baseline;padding:9px 2px;border-top:1px solid var(--line);cursor:pointer}
+.name{font-weight:600}
+.where{color:var(--accent);font-size:15px;margin-top:2px}
+.meta{color:var(--muted);font-size:13px;margin-top:4px;word-wrap:break-word}
+.sub{display:flex;gap:10px;align-items:center;padding:8px 2px;border-top:1px solid var(--line);cursor:pointer}
 .sub .name{font-weight:500}.sub .meta{margin:0}
 .place-head{cursor:pointer;display:flex;align-items:flex-start;gap:10px}
 .place-head .main{flex:1;min-width:0}
-.place-head .name{font-weight:600;font-size:17px}.place-head .meta{margin:2px 0 4px}
+.place-head .name{font-size:17px}.place-head .meta{margin:2px 0 4px}
 select.field{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
 .newbox{border-left:3px solid var(--accent);padding-left:12px;margin-top:6px}
-.btn.small{padding:8px 12px;font-size:14px;margin-top:10px}
-.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:4px 4px 0 0}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:4px 4px 0 0;white-space:nowrap}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
 .quick{display:flex;gap:8px;margin-top:12px}
 .quick input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);min-width:0}
@@ -64,51 +63,97 @@ select.field{appearance:none;-webkit-appearance:none;background-image:linear-gra
 @media (prefers-color-scheme: dark){.btn{color:#0d1a16}}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--line)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn.block{width:100%}
 .btn:disabled{opacity:.5}
 .hint{color:var(--muted);font-size:13px;margin-top:6px}
 .group h3{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 2px 6px}
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);
-  display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+/* vignettes */
+.ph{position:relative;flex:none;width:52px;height:52px;border-radius:10px;background:var(--ph);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ph::before{content:attr(data-emoji);font-size:24px}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s}
+.ph img.ok{opacity:1}
+.ph.sm{width:34px;height:34px;border-radius:8px}.ph.sm::before{font-size:17px}
+/* galerie */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 12px;font-size:14px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){.chip.on{color:#0d1a16}}
+.chips.wrapchips{flex-wrap:wrap;overflow:visible;padding-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow)}
+.tile .ph{width:100%;height:auto;aspect-ratio:1/1;border-radius:0}
+.tile .ph::before{font-size:44px}
+.tile .cap{padding:8px 10px 10px}
+.tile .cap .name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .cap .meta{margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* fiche détail */
+.hero{position:relative;width:100%;aspect-ratio:4/3;border-radius:14px;background:var(--ph);overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.hero::before{content:attr(data-emoji);font-size:72px}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity .2s}
+.hero img.ok{opacity:1}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;margin-top:8px;font-size:15px}
+.kv .k{color:var(--muted)}
+/* photo dans le formulaire */
+.photo-edit{display:flex;gap:12px;align-items:center}
+.photo-edit .ph{width:84px;height:84px;border-radius:12px}
+.photo-edit .ph::before{font-size:34px}
+.photo-edit .btns{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+/* courses */
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin-top:12px}
+.seg button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.prod{display:flex;align-items:center;gap:10px}
+.prod .main{flex:1;min-width:0;cursor:pointer}
+.status{border:0;border-radius:99px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.status.reste{background:var(--accent-soft);color:var(--accent)}
+.status.fini{background:var(--danger-soft);color:var(--danger)}
+.prod.isfini .name{color:var(--muted);text-decoration:line-through}
+.rrow{display:flex;gap:6px;align-items:center;margin-top:6px}
+.rrow input.rname{flex:1;min-width:0;padding:9px 10px}
+.rrow input.rqty{width:56px;padding:9px 6px;text-align:center}
+.rrow button{border:0;background:transparent;color:var(--muted);font-size:20px;padding:4px 6px;cursor:pointer}
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.progress div{height:100%;width:0;background:var(--accent);transition:width .2s}
+/* navigation */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs .in{display:flex;max-width:720px;width:100%}
-nav.tabs button{flex:1;border:0;background:transparent;padding:10px 4px 8px;font-size:12px;color:var(--muted);cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button{flex:1;border:0;background:transparent;padding:9px 2px 7px;font-size:11px;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--accent)}
-.fab{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:7;width:56px;height:56px;border-radius:50%;
-  border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer}
+.fab{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:7;width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer}
 @media (prefers-color-scheme: dark){.fab{color:#0d1a16}}
-/* modal */
+/* fenêtres */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 @media (min-width:640px){.backdrop{align-items:center}}
-.sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));
-  max-height:90vh;overflow:auto}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
 @media (min-width:640px){.sheet{border-radius:18px}}
 .sheet h2{margin:0 0 12px;font-size:19px}
 label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
 .field{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
-textarea.field{min-height:80px;resize:vertical}
+textarea.field{min-height:72px;resize:vertical}
 .actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
 .actions .spacer{flex:1}
-/* lock */
 .lock{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .lock .card{width:100%;max-width:420px}
 .lock h1{margin:0 0 4px;font-size:24px}
 .err{color:var(--danger);font-size:14px;margin-top:10px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);
-  padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90vw}
-details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90vw}
+details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
 .setrow{display:flex;flex-direction:column;gap:8px}
+.stack{display:flex;flex-direction:column;gap:12px}
 </style>
 </head>
 <body>
 
-<!-- ========== ÉCRAN DE CONFIGURATION / VERROUILLAGE ========== -->
+<!-- ========== CONFIGURATION / VERROUILLAGE ========== -->
 <section id="setupView" class="lock hidden">
   <div class="card">
     <h1>🏠 Ma Maison</h1>
     <div class="hint">Première connexion sur cet appareil. Tes données seront chiffrées avec ton mot de passe avant d'être envoyées sur GitHub.</div>
     <label>Nom d'utilisateur GitHub</label>
-    <input class="field" id="sOwner" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ex. florianhuedro">
+    <input class="field" id="sOwner" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ex. FloNewCal988">
     <label>Dépôt privé des données</label>
     <input class="field" id="sRepo" autocapitalize="off" autocorrect="off" spellcheck="false" value="ma-maison-donnees">
     <label>Jeton GitHub (fine-grained token)</label>
@@ -119,7 +164,7 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
     <label>Confirmer le mot de passe</label>
     <input class="field" id="sPw2" type="password" autocomplete="new-password">
     <div id="setupErr" class="err"></div>
-    <div class="actions"><button class="btn" id="setupBtn" style="flex:1">Connecter</button></div>
+    <div class="actions"><button class="btn block" id="setupBtn">Connecter</button></div>
   </div>
 </section>
 
@@ -130,7 +175,7 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
     <label>Mot de passe</label>
     <input class="field" id="lPw" type="password" autocomplete="current-password">
     <div id="lockErr" class="err"></div>
-    <div class="actions"><button class="btn" id="unlockBtn" style="flex:1">Déverrouiller</button></div>
+    <div class="actions"><button class="btn block" id="unlockBtn">Déverrouiller</button></div>
     <details><summary>Réinitialiser cet appareil</summary>
       <div class="hint">Efface la configuration locale de cet appareil (les données sur GitHub ne sont pas touchées).</div>
       <div class="actions"><button class="btn danger" id="forgetBtn">Oublier cet appareil</button></div>
@@ -144,6 +189,9 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
     <div class="row">
       <h1 id="title">Rangement</h1>
       <div class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt"></span></div>
+      <button class="iconbtn" id="gearBtn" title="Réglages" aria-label="Réglages">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
       <button class="iconbtn" id="lockNow" title="Verrouiller" aria-label="Verrouiller">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       </button>
@@ -152,41 +200,71 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
   </header>
 
   <main class="wrap">
-    <!-- Rangement -->
     <section id="tab-items">
       <div class="quick">
         <input id="quickIn" placeholder="ex. tente dans armoire terrasse" autocomplete="off">
         <button class="btn" id="quickBtn">OK</button>
       </div>
-      <div class="hint">Écris (ou dicte) « objet dans lieu ». Ex : « J'ai rangé la tente dans l'armoire de la terrasse ».</div>
+      <div class="hint">Écris (ou dicte) « objet dans rangement ». Ex : « J'ai rangé la tente dans l'armoire de la terrasse ».</div>
       <div class="list" id="itemsList"></div>
     </section>
-    <!-- Lieux -->
-    <section id="tab-places" class="hidden"><div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets.</div><div id="placesList"></div></section>
-    <!-- Infos -->
+
+    <section id="tab-places" class="hidden">
+      <div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets.</div>
+      <div id="placesList"></div>
+    </section>
+
+    <section id="tab-gallery" class="hidden">
+      <div class="chips" id="galChips"></div>
+      <div class="grid" id="galGrid"></div>
+    </section>
+
+    <section id="tab-courses" class="hidden">
+      <button class="btn block" id="scanBtn">📷 Scanner un ticket de caisse</button>
+      <input type="file" id="scanFile" accept="image/*" class="hidden">
+      <div class="seg" id="courseSeg">
+        <button data-f="all" class="on">Tout</button><button data-f="reste">Il en reste</button><button data-f="fini">Fini</button>
+      </div>
+      <div class="list" id="prodList"></div>
+      <details id="receiptsBox"><summary id="receiptsSum">Tickets enregistrés</summary><div class="list" id="receiptsList"></div></details>
+    </section>
+
     <section id="tab-infos" class="hidden"><div id="infosList"></div></section>
-    <!-- Réglages -->
+
     <section id="tab-settings" class="hidden">
-      <div class="card setrow">
-        <strong>Synchronisation</strong>
-        <div class="hint" id="setInfo"></div>
-        <button class="btn ghost" id="syncNow">Synchroniser maintenant</button>
-      </div>
-      <div class="card setrow" style="margin-top:12px">
-        <strong>Sécurité</strong>
-        <div class="hint">Verrouillage automatique après 10 min d'inactivité. Les données sont chiffrées (AES-256) avant d'être envoyées sur GitHub.</div>
-        <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
-      </div>
-      <div class="card setrow" style="margin-top:12px">
-        <strong>Sauvegarde</strong>
-        <div class="hint">Copie lisible de tes données (à garder en lieu sûr : elle n'est pas chiffrée).</div>
-        <button class="btn ghost" id="exportBtn">Exporter (JSON)</button>
-        <button class="btn ghost" id="importBtn">Importer un JSON</button>
-        <input type="file" id="importFile" accept="application/json" class="hidden">
-      </div>
-      <div class="card setrow" style="margin-top:12px">
-        <strong>Cet appareil</strong>
-        <button class="btn danger" id="forgetBtn2">Oublier cet appareil</button>
+      <div class="stack">
+        <div class="card setrow">
+          <strong>Pièces</strong>
+          <div class="hint">Appuie sur une pièce pour la renommer ou la supprimer.</div>
+          <div class="chips wrapchips" id="roomsChips"></div>
+          <button class="btn ghost small" data-addlist="rooms">+ Ajouter une pièce</button>
+        </div>
+        <div class="card setrow">
+          <strong>Catégories d'objets</strong>
+          <div class="chips wrapchips" id="catsChips"></div>
+          <button class="btn ghost small" data-addlist="cats">+ Ajouter une catégorie</button>
+        </div>
+        <div class="card setrow">
+          <strong>Synchronisation</strong>
+          <div class="hint" id="setInfo"></div>
+          <button class="btn ghost" id="syncNow">Synchroniser maintenant</button>
+        </div>
+        <div class="card setrow">
+          <strong>Sécurité</strong>
+          <div class="hint">Verrouillage automatique après 10 min d'inactivité. Données et photos chiffrées (AES-256) avant l'envoi sur GitHub.</div>
+          <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
+        </div>
+        <div class="card setrow">
+          <strong>Sauvegarde</strong>
+          <div class="hint">Copie lisible de tes données, sans les photos (à garder en lieu sûr : elle n'est pas chiffrée).</div>
+          <button class="btn ghost" id="exportBtn">Exporter (JSON)</button>
+          <button class="btn ghost" id="importBtn">Importer un JSON</button>
+          <input type="file" id="importFile" accept="application/json" class="hidden">
+        </div>
+        <div class="card setrow">
+          <strong>Cet appareil</strong>
+          <button class="btn danger" id="forgetBtn2">Oublier cet appareil</button>
+        </div>
       </div>
     </section>
   </main>
@@ -196,15 +274,15 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
   <nav class="tabs"><div class="in">
     <button data-tab="items" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Rangement</button>
     <button data-tab="places"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Lieux</button>
-    <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Infos maison</button>
-    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
+    <button data-tab="gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Galerie</button>
+    <button data-tab="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Courses</button>
+    <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Infos</button>
   </div></nav>
 </div>
 
 <div id="modalRoot"></div>
-<datalist id="placesDL"></datalist>
-<datalist id="catsDL"></datalist>
-<datalist id="roomsDL"></datalist>
+<datalist id="infoCatsDL"></datalist>
+<datalist id="prodDL"></datalist>
 
 <script>
 "use strict";
@@ -216,23 +294,25 @@ function unb64(s){ const b=atob(s.replace(/\s/g,"")); const u=new Uint8Array(b.l
 function rnd(n){ return crypto.getRandomValues(new Uint8Array(n)); }
 const keyCache = new Map();
 async function deriveKey(pw, saltB64){
-  const id = saltB64; if(keyCache.has(id)) return keyCache.get(id);
-  const base = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:unb64(saltB64), iterations:ITER, hash:"SHA-256"},
-    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
-  keyCache.set(id, key); return key;
+  const id = saltB64+"\u0000"+pw; if(keyCache.has(id)) return keyCache.get(id);
+  const p = (async()=>{
+    const base = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({name:"PBKDF2", salt:unb64(saltB64), iterations:ITER, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+  })();
+  keyCache.set(id, p); p.catch(()=>keyCache.delete(id)); return p;
 }
-async function encryptStr(pw, str, saltB64){
+async function encryptBytes(pw, bytes, saltB64){
   saltB64 = saltB64 || b64(rnd(16));
   const key = await deriveKey(pw, saltB64), iv = rnd(12);
-  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, te.encode(str));
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, bytes);
   return {v:1, alg:"AES-GCM-256/PBKDF2-SHA256", iter:ITER, salt:saltB64, iv:b64(iv), ct:b64(ct)};
 }
-async function decryptStr(pw, blob){
+async function decryptBytes(pw, blob){
   const key = await deriveKey(pw, blob.salt);
-  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(blob.iv)}, key, unb64(blob.ct));
-  return td.decode(pt);
+  return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(blob.iv)}, key, unb64(blob.ct)));
 }
+const encryptStr = (pw, str, salt) => encryptBytes(pw, te.encode(str), salt);
+const decryptStr = async (pw, blob) => td.decode(await decryptBytes(pw, blob));
 
 /* ================= STOCKAGE LOCAL ================= */
 const LS_CFG="mm_cfg", LS_CACHE="mm_cache";
@@ -241,38 +321,57 @@ const ls = {
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
+const idb = (()=>{
+  let p=null;
+  const db = () => p ||= new Promise((res,rej)=>{ const r=indexedDB.open("ma-maison",1); r.onupgradeneeded=()=>r.result.createObjectStore("files"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const run = (mode, fn) => db().then(d=>new Promise(res=>{ const tx=d.transaction("files",mode); const st=tx.objectStore("files"); const rq=fn(st); tx.oncomplete=()=>res(rq?.result); tx.onerror=()=>res(undefined); })).catch(()=>undefined);
+  return { get:k=>run("readonly",s=>s.get(k)), set:(k,v)=>run("readwrite",s=>s.put(v,k)), del:k=>run("readwrite",s=>s.delete(k)), clear:()=>run("readwrite",s=>s.clear()) };
+})();
 
 /* ================= GITHUB ================= */
 const DATA_PATH = "data.enc.json";
-function ghUrl(c){ return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${DATA_PATH}`; }
-function ghHeaders(token){ return {"Authorization":"Bearer "+token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28"}; }
-async function ghGet(c, token){
-  const r = await fetch(ghUrl(c)+"?t="+Date.now(), {headers:ghHeaders(token), cache:"no-store"});
-  if(r.status===404) return null;
-  if(r.status===401) throw new Error("Jeton GitHub refusé (expiré ou invalide).");
-  if(!r.ok) throw new Error("GitHub a répondu "+r.status+".");
-  const j = await r.json();
-  const txt = td.decode(unb64(j.content));
-  return {sha:j.sha, blob:JSON.parse(txt)};
+const ghBase = c => `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}`;
+const ghHeaders = t => ({"Authorization":"Bearer "+t, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28"});
+function ghErr(r){
+  if(r.status===401) return new Error("Jeton GitHub refusé (expiré ou invalide).");
+  if(r.status===403) return new Error("Le jeton n'a pas les droits sur ce dépôt.");
+  return new Error("GitHub a répondu "+r.status+".");
 }
-async function ghPut(c, token, blob, sha){
-  const body = {message:"Mise à jour "+new Date().toISOString(), content:b64(te.encode(JSON.stringify(blob)))};
+async function ghGetFile(c, token, path){
+  const r = await fetch(`${ghBase(c)}/contents/${path}?t=${Date.now()}`, {headers:ghHeaders(token), cache:"no-store"});
+  if(r.status===404) return null;
+  if(!r.ok) throw ghErr(r);
+  const j = await r.json();
+  let content = j.content;
+  if(!content){ // fichier > 1 Mo
+    const r2 = await fetch(`${ghBase(c)}/git/blobs/${j.sha}`, {headers:ghHeaders(token), cache:"no-store"});
+    if(!r2.ok) throw ghErr(r2);
+    content = (await r2.json()).content;
+  }
+  return {sha:j.sha, text:td.decode(unb64(content))};
+}
+async function ghPutFile(c, token, path, text, sha, message){
+  const body = {message:message||("Mise à jour "+new Date().toISOString()), content:b64(te.encode(text))};
   if(sha) body.sha = sha;
-  const r = await fetch(ghUrl(c), {method:"PUT", headers:{...ghHeaders(token),"Content-Type":"application/json"}, body:JSON.stringify(body)});
-  if(r.status===409 || r.status===422) { const e = new Error("conflict"); e.conflict=true; throw e; }
-  if(r.status===401) throw new Error("Jeton GitHub refusé (expiré ou invalide).");
-  if(r.status===403 || r.status===404) throw new Error("Le jeton n'a pas le droit d'écrire dans ce dépôt.");
-  if(!r.ok) throw new Error("GitHub a répondu "+r.status+".");
-  const j = await r.json(); return j.content.sha;
+  const r = await fetch(`${ghBase(c)}/contents/${path}`, {method:"PUT", headers:{...ghHeaders(token),"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  if(r.status===409 || r.status===422){ const e=new Error("conflict"); e.conflict=true; throw e; }
+  if(r.status===404) throw new Error("Le jeton n'a pas le droit d'écrire dans ce dépôt.");
+  if(!r.ok) throw ghErr(r);
+  return (await r.json()).content.sha;
+}
+async function ghDeleteFile(c, token, path){
+  const f = await ghGetFile(c, token, path); if(!f) return;
+  await fetch(`${ghBase(c)}/contents/${path}`, {method:"DELETE", headers:{...ghHeaders(token),"Content-Type":"application/json"}, body:JSON.stringify({message:"Suppression", sha:f.sha})});
 }
 
 /* ================= DONNÉES ================= */
-let S = { pw:null, token:null, cfg:null, data:null, sha:null, dirty:false };
-function emptyData(){ return {v:1, items:[], infos:[], places:[]}; }
+const KEYS = ["items","infos","places","rooms","cats","products","receipts"];
+let S = { pw:null, token:null, cfg:null, data:null, dirty:false };
+function emptyData(){ const d={v:2}; for(const k of KEYS) d[k]=[]; return d; }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function merge(a, b){
   const out = emptyData();
-  for(const k of ["items","infos","places"]){
+  for(const k of KEYS){
     const m = new Map();
     for(const x of [...(a?.[k]||[]), ...(b?.[k]||[])]){
       const cur = m.get(x.id);
@@ -282,39 +381,51 @@ function merge(a, b){
   }
   return out;
 }
-const live = arr => arr.filter(x=>!x.deleted);
+const live = arr => (arr||[]).filter(x=>!x.deleted);
+const byName = (a,b) => a.name.localeCompare(b.name,"fr");
+
+const DEFAULT_ROOMS = ["Cuisine","Salon","Salle à manger","Chambre","Chambre d'amis","Salle de bain","WC","Entrée","Bureau","Buanderie","Garage","Terrasse","Jardin","Cabanon"];
+const DEFAULT_CATS = [["Camping","⛺"],["Outils de jardin","🌱"],["Bricolage","🔧"],["Cuisine & vaisselle","🍳"],["Électronique & câbles","🔌"],["Vêtements & chaussures","👕"],["Linge de maison","🛏️"],["Sport & loisirs","⚽"],["Plage & pêche","🎣"],["Décoration","🖼️"],["Fêtes & saisonnier","🎄"],["Papiers & documents","📄"],["Produits d'entretien","🧽"],["Jeux & jouets","🧸"],["Voyage & bagages","🧳"],["Santé & pharmacie","💊"],["Animaux","🐾"],["Voiture","🚗"],["Divers","📦"]];
+function seedDefaults(){
+  const d=S.data; let n=0; const now=Date.now();
+  for(const k of KEYS) d[k] ||= [];
+  if(!d.rooms.length){ for(const r of DEFAULT_ROOMS) d.rooms.push({id:"r:"+placeKey(r), name:r, updatedAt:1}); n++; }
+  if(!d.cats.length){ for(const [c,i] of DEFAULT_CATS) d.cats.push({id:"c:"+placeKey(c), name:c, icon:i, updatedAt:1}); n++; }
+  // pièces saisies à la main avant cette version
+  const names = new Set(live(d.rooms).map(r=>norm(r.name)));
+  for(const p of live(d.places)) if(p.room && !names.has(norm(p.room))){ d.rooms.push({id:"r:"+placeKey(p.room), name:p.room, updatedAt:now}); names.add(norm(p.room)); n++; }
+  return n;
+}
+const catIcon = name => (live(S.data.cats).find(c=>c.name===name)||{}).icon || "📦";
 
 /* ================= SYNCHRO ================= */
 let saveTimer=null, syncing=false;
-function setSync(state, txt){
-  const d=document.getElementById("syncDot"); d.className="dot "+state;
-  document.getElementById("syncTxt").textContent=txt;
-}
-async function cacheLocal(){
-  try{ ls.set(LS_CACHE, await encryptStr(S.pw, JSON.stringify(S.data), S.cfg.salt)); }catch(e){}
-}
+function setSync(state, txt){ $("syncDot").className="dot "+state; $("syncTxt").textContent=txt; }
+async function cacheLocal(){ try{ ls.set(LS_CACHE, await encryptStr(S.pw, JSON.stringify(S.data), S.cfg.salt)); }catch(e){} }
 function touch(){
   S.dirty = true; cacheLocal(); setSync("busy","À envoyer…");
   clearTimeout(saveTimer); saveTimer = setTimeout(sync, 1200);
 }
 async function sync(){
+  if(!S.pw) return;
   if(syncing){ clearTimeout(saveTimer); saveTimer=setTimeout(sync,1500); return; }
   syncing = true; setSync("busy","Synchro…");
   try{
     for(let attempt=0; attempt<3; attempt++){
-      const remote = await ghGet(S.cfg, S.token);
-      let remoteData = null;
+      const remote = await ghGetFile(S.cfg, S.token, DATA_PATH);
+      let remoteData=null, salt=S.cfg.salt;
       if(remote){
-        try{ remoteData = JSON.parse(await decryptStr(S.pw, remote.blob)); }
+        const blob = JSON.parse(remote.text); salt = blob.salt;
+        try{ remoteData = JSON.parse(await decryptStr(S.pw, blob)); }
         catch(e){ throw new Error("Impossible de déchiffrer les données GitHub : mot de passe différent sur un autre appareil ?"); }
       }
       const merged = merge(remoteData, S.data);
-      const changed = !remote || JSON.stringify(merged) !== JSON.stringify(remoteData);
-      S.data = merged; S.data.places ||= []; normalizeLocations();
-      if(!changed){ S.sha = remote.sha; S.dirty=false; break; }
+      S.data = merged; seedDefaults(); normalizeLocations();
+      const changed = !remote || JSON.stringify(S.data) !== JSON.stringify(merge(remoteData, null));
+      if(!changed){ S.dirty=false; break; }
       try{
-        const blob = await encryptStr(S.pw, JSON.stringify(S.data), remote?.blob?.salt || S.cfg.salt);
-        S.sha = await ghPut(S.cfg, S.token, blob, remote?.sha);
+        const blob = await encryptStr(S.pw, JSON.stringify(S.data), salt);
+        await ghPutFile(S.cfg, S.token, DATA_PATH, JSON.stringify(blob), remote?.sha);
         S.dirty=false; break;
       }catch(e){ if(!e.conflict || attempt===2) throw e; }
     }
@@ -339,21 +450,19 @@ async function doSetup(){
   $("setupBtn").disabled=true; $("setupBtn").textContent="Connexion…";
   try{
     const cfg = {owner, repo, salt:b64(rnd(16))};
-    const remote = await ghGet(cfg, token);
+    const remote = await ghGetFile(cfg, token, DATA_PATH);
     let data = emptyData();
     if(remote){
-      try{ data = JSON.parse(await decryptStr(pw, remote.blob)); }
+      try{ data = JSON.parse(await decryptStr(pw, JSON.parse(remote.text))); }
       catch(e){ throw new Error("Données trouvées sur GitHub, mais ce mot de passe ne les ouvre pas."); }
     }
     cfg.tok = await encryptStr(pw, token, cfg.salt);
     ls.set(LS_CFG, cfg);
-    S = {pw, token, cfg, data, sha:remote?.sha||null};
-    startApp();
-    if(!remote) await sync();
-  }catch(e){ err.textContent = e.message.includes("fetch") ? "Connexion à GitHub impossible." : e.message; }
+    S = {pw, token, cfg, data};
+    startApp(); sync();
+  }catch(e){ err.textContent = /fetch|network/i.test(e.message) ? "Connexion à GitHub impossible." : e.message; }
   finally{ $("setupBtn").disabled=false; $("setupBtn").textContent="Connecter"; }
 }
-
 async function doUnlock(){
   const pw=$("lPw").value, err=$("lockErr"); err.textContent="";
   const cfg = ls.get(LS_CFG);
@@ -364,20 +473,19 @@ async function doUnlock(){
     let data = emptyData();
     const cache = ls.get(LS_CACHE);
     if(cache){ try{ data = JSON.parse(await decryptStr(pw, cache)); }catch(e){} }
-    S = {pw, token, cfg, data, sha:null};
+    S = {pw, token, cfg, data};
     $("lPw").value="";
     startApp(); sync();
   }catch(e){ err.textContent=e.message; }
   finally{ $("unlockBtn").disabled=false; }
 }
-
 function lock(){
   if(S.dirty && S.pw) sync();
-  setTimeout(()=>{ S = {pw:null, token:null, cfg:ls.get(LS_CFG), data:null}; keyCache.clear(); boot(); }, S.dirty?1500:0);
+  setTimeout(()=>{ S = {pw:null, token:null, cfg:ls.get(LS_CFG), data:null}; keyCache.clear(); photoURLs.forEach(u=>URL.revokeObjectURL(u)); photoURLs.clear(); $("modalRoot").innerHTML=""; boot(); }, S.dirty?1500:0);
 }
 function forget(){
   if(!confirm("Effacer la configuration de cet appareil ? Tes données sur GitHub restent intactes.")) return;
-  ls.del(LS_CFG); ls.del(LS_CACHE); keyCache.clear(); S={}; boot();
+  ls.del(LS_CFG); ls.del(LS_CACHE); idb.clear(); keyCache.clear(); S={}; $("modalRoot").innerHTML=""; boot();
 }
 function boot(){
   const cfg = ls.get(LS_CFG);
@@ -385,67 +493,191 @@ function boot(){
   $("lockWho").textContent = "Données : "+cfg.owner+"/"+cfg.repo;
   show("lockView"); setTimeout(()=>$("lPw").focus(), 50);
 }
-
-/* verrouillage auto */
 let lastAct = Date.now();
 ["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev, ()=>lastAct=Date.now(), {passive:true}));
-setInterval(()=>{ if(S.pw && Date.now()-lastAct > 10*60*1000) lock(); }, 30000);
+setInterval(()=>{ if(S.pw && !busyLong && Date.now()-lastAct > 10*60*1000) lock(); }, 30000);
+let busyLong = false;
 document.addEventListener("visibilitychange", ()=>{
-  if(document.visibilityState==="visible" && S.pw){
-    if(Date.now()-lastAct > 10*60*1000) lock(); else sync();
-  }
+  if(document.visibilityState==="visible" && S.pw){ if(!busyLong && Date.now()-lastAct > 10*60*1000) lock(); else sync(); }
 });
 
-/* ================= INTERFACE ================= */
-let tab="items", placeIndex=new Map();
+/* ================= OUTILS ================= */
 const norm = s => (s||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
-const esc = s => (s||"").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const esc = s => (s??"").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate = t => t ? new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}) : "";
-function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
+const isoDay = t => { const d=new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const dayTs = iso => { const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d,12).getTime(); };
+const cap = x => x ? x.charAt(0).toUpperCase()+x.slice(1) : x;
+function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.flat().join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
+function daysAgo(t){ const d=Math.round((Date.now()-t)/86400000); return d<=0?"aujourd'hui":d===1?"hier":d<31?`il y a ${d} j`:d<365?`il y a ${Math.round(d/30)} mois`:`il y a ${Math.round(d/365)} an${d>=730?"s":""}`; }
 
-function startApp(){ S.data.places ||= []; if(normalizeLocations()) touch(); show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
+/* reconnaissance tolérante (fautes de frappe, « de la »…) */
+const STOP = new Set(["de","la","le","les","l","du","des","d","a","au","aux","en","dans","sur","sous","un","une","mon","ma","mes"]);
+function placeKey(x){ return norm(x).replace(/['’\-_.,;:!?()]/g," ").split(/\s+/).filter(w=>w && !STOP.has(w)).join(" "); }
+function lev(a,b){
+  if(a===b) return 0; const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,j)=>j), cur=new Array(n+1);
+  for(let i=1;i<=m;i++){ cur[0]=i; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); [prev,cur]=[cur,prev]; }
+  return prev[n];
+}
+function closest(name, candidates, div=6){
+  const k=placeKey(name); if(!k) return null;
+  const dg = x=>x.replace(/\D/g,""), flat=k.replace(/ /g,"");
+  let best=null, bd=Infinity;
+  for(const c of candidates){ const ck=placeKey(c); if(ck===k) return c; if(dg(ck)!==dg(k)) continue; const d=lev(ck.replace(/ /g,""),flat); if(d<bd){bd=d;best=c;} }
+  const tol = div>=99 ? 0 : Math.max(1, Math.round(flat.length/div));
+  return bd<=tol ? best : null;
+}
+function findPlace(name){ const d=live(S.data.places); const n=closest(name, d.map(p=>p.name)); return n ? d.find(p=>p.name===n) : null; }
+function normalizeLocations(){
+  let n=0; const now=Date.now(); const names=new Set(live(S.data.places).map(p=>p.name));
+  for(const i of live(S.data.items)){
+    if(!i.location || names.has(i.location)) continue;
+    const p=findPlace(i.location); if(p){ i.location=p.name; i.updatedAt=now; n++; }
+  }
+  return n;
+}
 
-const TITLES = {items:"Rangement", places:"Lieux", infos:"Infos maison", settings:"Réglages"};
+/* menu déroulant avec « ＋ Nouveau… » */
+function optionsHTML(groups, current, placeholder, newLabel){
+  let h = `<option value="">${esc(placeholder)}</option>`;
+  for(const g of groups){
+    if(!g.options.length) continue;
+    const o = g.options.map(v=>`<option value="${esc(v)}"${v===current?" selected":""}>${esc(g.fmt?g.fmt(v):v)}</option>`).join("");
+    h += g.label ? `<optgroup label="${esc(g.label)}">${o}</optgroup>` : o;
+  }
+  if(current && !groups.some(g=>g.options.includes(current))) h += `<option value="${esc(current)}" selected>${esc(current)}</option>`;
+  return h + `<option value="__new">＋ ${esc(newLabel)}…</option>`;
+}
+function roomGroups(){ return [{options:live(S.data.rooms).sort(byName).map(r=>r.name)}]; }
+function catGroups(){ return [{options:live(S.data.cats).sort((a,b)=>(a.name==="Divers")-(b.name==="Divers")||byName(a,b)).map(c=>c.name), fmt:v=>catIcon(v)+"  "+v}]; }
+function placeGroups(){
+  const declared = live(S.data.places), groups = {};
+  for(const p of declared) (groups[p.room||"Sans pièce"] ||= []).push(p.name);
+  const declaredNames = new Set(declared.map(p=>p.name));
+  const loose = [...new Set(live(S.data.items).map(i=>i.location).filter(l=>l && !declaredNames.has(l)))];
+  if(loose.length) groups["Non classés"] = loose;
+  const rank = x => x==="Non classés"?2 : x==="Sans pièce"?1 : 0;
+  return Object.keys(groups).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b,"fr")).map(g=>({label:g, options:groups[g].sort((a,b)=>a.localeCompare(b,"fr"))}));
+}
+function bindNew(bd, selId, boxId, focusId){
+  const sel=bd.querySelector("#"+selId), box=bd.querySelector("#"+boxId);
+  const upd=()=>box.classList.toggle("hidden", sel.value!=="__new");
+  sel.addEventListener("change", ()=>{ upd(); if(sel.value==="__new") bd.querySelector("#"+focusId)?.focus(); });
+  upd(); return upd;
+}
+/* crée (ou retrouve) une pièce / une catégorie */
+function ensureRoom(name){
+  name=name.trim(); if(!name) return "";
+  const ex = live(S.data.rooms).find(r=>norm(r.name)===norm(name)) || live(S.data.rooms).find(r=>r.name===closest(name, live(S.data.rooms).map(x=>x.name)));
+  if(ex) return ex.name;
+  S.data.rooms.push({id:uid(), name:cap(name), updatedAt:Date.now()}); return cap(name);
+}
+function ensureCat(name){
+  name=name.trim(); if(!name) return "";
+  const ex = live(S.data.cats).find(c=>norm(c.name)===norm(name));
+  if(ex) return ex.name;
+  S.data.cats.push({id:uid(), name:cap(name), icon:"📦", updatedAt:Date.now()}); return cap(name);
+}
+function readRoom(bd, selId, newId){ const v=bd.querySelector("#"+selId).value; return v==="__new" ? ensureRoom(bd.querySelector("#"+newId).value) : v; }
+
+/* ================= PHOTOS ================= */
+const photoURLs = new Map(), photoInflight = new Map();
+const photoPath = (pid, kind) => `photos/${pid}.${kind}.enc`;
+async function loadImage(file){
+  const url = URL.createObjectURL(file);
+  try{ const img = new Image(); img.src = url; await img.decode(); return img; }
+  finally{ setTimeout(()=>URL.revokeObjectURL(url), 2000); }
+}
+function scaleTo(img, max, q){
+  const w=img.naturalWidth, h=img.naturalHeight, s=Math.min(1, max/Math.max(w,h));
+  const c=document.createElement("canvas"); c.width=Math.round(w*s); c.height=Math.round(h*s);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return new Promise(res=>c.toBlob(b=>res(b), "image/jpeg", q));
+}
+async function makePhoto(file){ const img=await loadImage(file); return {full:await scaleTo(img,1400,0.8), thumb:await scaleTo(img,420,0.72)}; }
+async function uploadPhoto(pid, blobs){
+  for(const kind of ["thumb","full"]){
+    const bytes = new Uint8Array(await blobs[kind].arrayBuffer());
+    const enc = JSON.stringify(await encryptBytes(S.pw, bytes, S.cfg.salt));
+    await idb.set(photoPath(pid,kind), enc);
+    photoURLs.set(pid+kind, URL.createObjectURL(blobs[kind]));
+    await ghPutFile(S.cfg, S.token, photoPath(pid,kind), enc, null, "Photo");
+  }
+}
+function deletePhoto(pid){
+  for(const kind of ["thumb","full"]){ idb.del(photoPath(pid,kind)); ghDeleteFile(S.cfg, S.token, photoPath(pid,kind)).catch(()=>{}); }
+}
+function loadPhotoURL(pid, kind){
+  const k=pid+kind; if(photoURLs.has(k)) return Promise.resolve(photoURLs.get(k));
+  if(photoInflight.has(k)) return photoInflight.get(k);
+  const p = (async()=>{
+    try{
+      let enc = await idb.get(photoPath(pid,kind));
+      if(!enc){ const f = await ghGetFile(S.cfg, S.token, photoPath(pid,kind)); if(!f) return null; enc=f.text; idb.set(photoPath(pid,kind), enc); }
+      const bytes = await decryptBytes(S.pw, JSON.parse(enc));
+      const url = URL.createObjectURL(new Blob([bytes], {type:"image/jpeg"}));
+      photoURLs.set(k, url); return url;
+    }catch(e){ return null; } finally{ photoInflight.delete(k); }
+  })();
+  photoInflight.set(k, p); return p;
+}
+function hydratePhotos(root){
+  root.querySelectorAll("img[data-pid]").forEach(img=>{
+    const kind = img.dataset.kind || "thumb";
+    loadPhotoURL(img.dataset.pid, kind).then(u=>{ if(u){ img.src=u; img.onload=()=>img.classList.add("ok"); if(img.complete) img.classList.add("ok"); } });
+  });
+}
+const phHTML = (it, cls="") => `<div class="ph ${cls}" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}">`:""}</div>`;
+
+/* ================= INTERFACE ================= */
+let tab="items", placeIndex=new Map(), galCat="", courseFilter="all";
+const TITLES = {items:"Rangement", places:"Lieux", gallery:"Galerie", courses:"Courses", infos:"Infos maison", settings:"Réglages"};
+const PH = {items:"Rechercher un objet, un rangement…", places:"Rechercher un rangement ou une pièce…", gallery:"Rechercher un objet…", courses:"Rechercher un article acheté…", infos:"Rechercher une info (ex. poubelle)…"};
+function startApp(){
+  if(seedDefaults() + normalizeLocations()) touch();
+  show("appView"); lastAct=Date.now(); setTab(tab); setSync(S.dirty?"busy":"ok", "");
+}
 function setTab(t){
   tab=t;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===t));
+  $("gearBtn").classList.toggle("on", t==="settings");
   for(const k of Object.keys(TITLES)) $("tab-"+k).classList.toggle("hidden", k!==t);
   $("title").textContent = TITLES[t];
   $("fab").classList.toggle("hidden", t==="settings");
   $("q").parentElement.classList.toggle("hidden", t==="settings");
-  $("q").placeholder = t==="infos" ? "Rechercher une info (ex. poubelle)…" : "Rechercher un objet ou un lieu…";
+  $("q").placeholder = PH[t]||"Rechercher…";
   render(); scrollTo(0,0);
 }
+
+function itemCard(i){
+  return `<div class="card item" data-open="${i.id}">
+    ${phHTML(i)}
+    <div class="main">
+      <div class="name">${esc(i.name)}</div>
+      <div class="where">📍 ${esc(i.location||"—")}${roomOfPlace(i.location)?` <span class="meta">· ${esc(roomOfPlace(i.location))}</span>`:""}</div>
+      ${i.category?`<span class="pill">${esc(i.category)}</span>`:""}
+      ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
+    </div></div>`;
+}
+const roomOfPlace = n => (live(S.data.places).find(p=>p.name===n)||{}).room||"";
 
 function render(){
   if(!S.data) return;
   const q = $("q").value;
   const items = live(S.data.items), infos = live(S.data.infos);
-  // datalists
-  const declared = live(S.data.places||[]);
-  const places = [...new Set([...declared.map(p=>p.name), ...items.map(i=>i.location)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
-  const roomOf = n => (declared.find(p=>norm(p.name)===norm(n))||{}).room||"";
-  $("placesDL").innerHTML = places.map(p=>`<option value="${esc(p)}">${esc(roomOf(p))}</option>`).join("");
-  const rooms = [...new Set(["Cuisine","Salon","Chambre","Salle de bain","Terrasse","Garage","Buanderie","Bureau","Entrée","Jardin", ...declared.map(p=>p.room).filter(Boolean)])];
-  $("roomsDL").innerHTML = rooms.map(r=>`<option value="${esc(r)}">`).join("");
-  const cats = [...new Set(["Cuisine","Salle de bain","Courses","Entretien","Jardin","Voiture","Électricité","Contacts", ...infos.map(i=>i.category).filter(Boolean)])];
-  $("catsDL").innerHTML = cats.map(p=>`<option value="${esc(p)}">`).join("");
+  const itemHay = i => [i.name, i.location, roomOfPlace(i.location), i.category, i.notes];
 
   if(tab==="items"){
-    const list = items.filter(i=>matches(q, i.name, i.location, i.notes, i.tags))
-      .sort((a,b)=> q ? a.name.localeCompare(b.name,"fr") : (b.updatedAt||0)-(a.updatedAt||0));
-    $("itemsList").innerHTML = list.length ? list.map(i=>`
-      <div class="card item" data-id="${i.id}" data-kind="items">
-        <div class="main">
-          <div class="name">${esc(i.name)}</div>
-          <div class="where">📍 ${esc(i.location||"—")}</div>
-          ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
-          <div class="meta">Rangé le ${fmtDate(i.updatedAt)}</div>
-        </div>
-      </div>`).join("") : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`;
+    const list = items.filter(i=>matches(q, itemHay(i))).sort((a,b)=> q ? byName(a,b) : (b.updatedAt||0)-(a.updatedAt||0));
+    $("itemsList").innerHTML = list.length ? list.map(itemCard).join("")
+      : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`;
+    hydratePhotos($("itemsList"));
   }
+
   if(tab==="places"){
+    const declared = live(S.data.places);
     const map = new Map();
     for(const p of declared) map.set(norm(p.name), {place:p, name:p.name, room:p.room||"", items:[]});
     for(const i of items){
@@ -454,10 +686,10 @@ function render(){
       map.get(k).items.push(i);
     }
     placeIndex = map;
-    const entries = [...map.entries()].filter(([k,e])=> !q || matches(q, e.name, e.room, e.place?.notes) || e.items.some(i=>matches(q, i.name, i.notes)));
+    const entries = [...map.entries()].filter(([k,e])=> !q || matches(q, e.name, e.room, e.place?.notes||"") || e.items.some(i=>matches(q, i.name, i.notes)));
     const groups = {};
-    for(const [k,e] of entries) (groups[e.room||"Autres rangements"] ||= []).push([k,e]);
-    const gkeys = Object.keys(groups).sort((a,b)=> a==="Autres rangements" ? 1 : b==="Autres rangements" ? -1 : a.localeCompare(b,"fr"));
+    for(const [k,e] of entries) (groups[e.room||"Sans pièce"] ||= []).push([k,e]);
+    const gkeys = Object.keys(groups).sort((a,b)=> (a==="Sans pièce")-(b==="Sans pièce") || a.localeCompare(b,"fr"));
     $("placesList").innerHTML = gkeys.length ? gkeys.map(g=>`
       <div class="group"><h3>${esc(g)}</h3><div class="list" style="margin-top:0">
       ${groups[g].sort((a,b)=>a[1].name.localeCompare(b[1].name,"fr")).map(([k,e])=>`
@@ -466,14 +698,53 @@ function render(){
             <div class="name">📦 ${esc(e.name)}</div>
             <div class="meta">${e.items.length} objet${e.items.length>1?"s":""}${e.place?.notes?" · "+esc(e.place.notes):""}</div>
           </div><span class="meta">✏️</span></div>
-          ${e.items.sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(i=>`
-            <div class="sub item" data-id="${i.id}" data-kind="items"><span class="name">${esc(i.name)}</span>${i.notes?`<span class="meta">· ${esc(i.notes)}</span>`:""}</div>`).join("")}
-          <button class="btn ghost small" data-addin="${esc(e.name)}">+ Ajouter un objet ici</button>
+          ${e.items.sort(byName).map(i=>`<div class="sub" data-open="${i.id}">${phHTML(i,"sm")}<span class="name">${esc(i.name)}</span>${i.notes?`<span class="meta">· ${esc(i.notes)}</span>`:""}</div>`).join("")}
+          <button class="btn ghost small" style="margin-top:10px" data-addin="${esc(e.name)}">+ Ajouter un objet ici</button>
         </div>`).join("")}
       </div></div>`).join("")
       : `<div class="empty">${q?"Aucun rangement trouvé.":"Aucun rangement pour l'instant.<br>Appuie sur + pour créer ton premier rangement."}</div>`;
+    hydratePhotos($("placesList"));
   }
+
+  if(tab==="gallery"){
+    const counts = {}; for(const i of items) if(i.category) counts[i.category]=(counts[i.category]||0)+1;
+    const cats = Object.keys(counts).sort((a,b)=>a.localeCompare(b,"fr"));
+    if(galCat && !counts[galCat]) galCat="";
+    $("galChips").innerHTML = `<button class="chip${galCat?"":" on"}" data-gcat="">Tout · ${items.length}</button>` +
+      cats.map(c=>`<button class="chip${galCat===c?" on":""}" data-gcat="${esc(c)}">${esc(catIcon(c))} ${esc(c)} · ${counts[c]}</button>`).join("");
+    const list = items.filter(i=>(!galCat||i.category===galCat) && matches(q, itemHay(i))).sort(byName);
+    $("galGrid").innerHTML = list.length ? list.map(i=>`
+      <div class="tile" data-open="${i.id}">
+        <div class="ph" data-emoji="${esc(catIcon(i.category))}">${i.photo?`<img alt="" data-pid="${esc(i.photo.id)}">`:""}</div>
+        <div class="cap"><div class="name">${esc(i.name)}</div><div class="meta">📍 ${esc(i.location||"—")}</div></div>
+      </div>`).join("") : `<div class="empty" style="grid-column:1/-1">${q||galCat?"Aucun objet trouvé.":"Aucun objet pour l'instant."}</div>`;
+    hydratePhotos($("galGrid"));
+  }
+
+  if(tab==="courses"){
+    document.querySelectorAll("#courseSeg button").forEach(b=>b.classList.toggle("on", b.dataset.f===courseFilter));
+    const prods = live(S.data.products)
+      .filter(p=>(courseFilter==="all"||p.status===courseFilter) && matches(q, p.name, p.aliases||[]))
+      .sort((a,b)=>(b.lastDate||0)-(a.lastDate||0) || byName(a,b));
+    $("prodList").innerHTML = prods.length ? prods.map(p=>{
+      const n = (p.history||[]).length;
+      return `<div class="card prod${p.status==="fini"?" isfini":""}">
+        <div class="main" data-prod="${p.id}">
+          <div class="name">${esc(p.name)}</div>
+          <div class="meta">Acheté ${daysAgo(p.lastDate)} · ${fmtDate(p.lastDate)}${n>1?` · ${n} achats`:""}</div>
+        </div>
+        <button class="status ${p.status==="fini"?"fini":"reste"}" data-toggle="${p.id}">${p.status==="fini"?"✗ Fini":"✓ Il en reste"}</button>
+      </div>`; }).join("")
+      : `<div class="empty">${q?"Aucun article trouvé pour « "+esc(q)+" ».<br>Tu ne l'as pas acheté récemment.":courseFilter==="fini"?"Aucun article marqué comme fini.":"Aucun achat enregistré.<br>Scanne ton premier ticket de caisse !"}</div>`;
+    const recs = live(S.data.receipts).sort((a,b)=>(b.date||0)-(a.date||0));
+    $("receiptsBox").classList.toggle("hidden", !recs.length);
+    $("receiptsSum").textContent = `Tickets enregistrés (${recs.length})`;
+    $("receiptsList").innerHTML = recs.map(r=>`<div class="card item" data-receipt="${r.id}"><div class="main">
+      <div class="name">${esc(r.store||"Ticket")} · ${fmtDate(r.date)}</div><div class="meta">${(r.lines||[]).length} article(s)</div></div></div>`).join("");
+  }
+
   if(tab==="infos"){
+    $("infoCatsDL").innerHTML = [...new Set(["Cuisine","Salle de bain","Courses","Entretien","Jardin","Voiture","Électricité","Contacts", ...infos.map(i=>i.category).filter(Boolean)])].map(p=>`<option value="${esc(p)}">`).join("");
     const list = infos.filter(i=>matches(q, i.title, i.value, i.category, i.notes));
     const groups = {};
     for(const i of list) (groups[i.category||"Divers"] ||= []).push(i);
@@ -481,19 +752,22 @@ function render(){
     $("infosList").innerHTML = keys.length ? keys.map(k=>`
       <div class="group"><h3>${esc(k)}</h3>
       <div class="list" style="margin-top:0">${groups[k].sort((a,b)=>a.title.localeCompare(b.title,"fr")).map(i=>`
-        <div class="card item" data-id="${i.id}" data-kind="infos"><div class="main">
+        <div class="card item" data-info="${i.id}"><div class="main">
           <div class="name">${esc(i.title)}</div>
           <div class="where">${esc(i.value)}</div>
           ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
         </div></div>`).join("")}</div></div>`).join("")
       : `<div class="empty">${q?"Aucune info trouvée.":"Aucune info pour l'instant.<br>Ex : « Poubelle cuisine » → « Sacs de 20 L »."}</div>`;
   }
+
   if(tab==="settings"){
-    $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${items.length} objet(s), ${infos.length} info(s)` + (S.lastSync?` · dernière synchro ${S.lastSync.toLocaleTimeString("fr-FR")}`:"");
+    $("roomsChips").innerHTML = live(S.data.rooms).sort(byName).map(r=>`<button class="chip" data-listedit="rooms:${esc(r.id)}">${esc(r.name)}</button>`).join("");
+    $("catsChips").innerHTML = live(S.data.cats).sort(byName).map(c=>`<button class="chip" data-listedit="cats:${esc(c.id)}">${esc(c.icon||"📦")} ${esc(c.name)}</button>`).join("");
+    $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${items.length} objet(s), ${live(S.data.places).length} rangement(s), ${live(S.data.products).length} article(s) acheté(s)` + (S.lastSync?` · synchro ${S.lastSync.toLocaleTimeString("fr-FR")}`:"");
   }
 }
 
-/* ---- saisie rapide « objet dans lieu » ---- */
+/* ---- saisie rapide « objet dans rangement » ---- */
 function parseQuick(s){
   s = s.trim().replace(/[.!]+$/,"");
   s = s.replace(/^(j['’]\s*ai|je\s+(?:mets|range|place|pose))\s+(rang[ée]e?s?|plac[ée]e?s?|mis(?:es?)?|pos[ée]e?s?|stock[ée]e?s?)?\s*/i, "");
@@ -505,41 +779,12 @@ function parseQuick(s){
   const keepPrep = /^(sur|sous|derri[eè]re|devant)$/.test(prep);
   if(!keepPrep) loc = strip(loc);
   if(!name || !loc) return null;
-  const cap = x => x.charAt(0).toUpperCase()+x.slice(1);
-  const locLabel = (keepPrep ? prep+" " : "") + loc;
-  return {name:cap(name), location:cap(locLabel.trim())};
+  return {name:cap(name), location:cap((keepPrep ? prep+" " : "") + loc)};
 }
-/* ---- reconnaissance tolérante des rangements ---- */
-const STOP = new Set(["de","la","le","les","l","du","des","d","a","au","aux","en","dans","sur","sous","un","une","mon","ma","mes"]);
-function placeKey(x){ return norm(x).replace(/['’\-_.,;:!?()]/g," ").split(/\s+/).filter(w=>w && !STOP.has(w)).join(" "); }
-function lev(a,b){
-  if(a===b) return 0; const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
-  let prev=Array.from({length:n+1},(_,j)=>j), cur=new Array(n+1);
-  for(let i=1;i<=m;i++){ cur[0]=i; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); [prev,cur]=[cur,prev]; }
-  return prev[n];
-}
-function closest(name, candidates){
-  const k=placeKey(name); if(!k) return null;
-  let best=null, bd=Infinity;
-  const dg = x=>x.replace(/\D/g,"");
-  for(const c of candidates){ const ck=placeKey(c); if(ck===k) return c; if(dg(ck)!==dg(k)) continue; const d=lev(ck.replace(/ /g,""),k.replace(/ /g,"")); if(d<bd){bd=d;best=c;} }
-  const tol = Math.max(1, Math.round(k.replace(/ /g,"").length/6));
-  return bd<=tol ? best : null;
-}
-function findPlace(name){ const d=live(S.data.places||[]); const n=closest(name, d.map(p=>p.name)); return n ? d.find(p=>p.name===n) : null; }
-function normalizeLocations(){
-  let n=0; const now=Date.now(); const names=new Set(live(S.data.places||[]).map(p=>p.name));
-  for(const i of live(S.data.items)){
-    if(!i.location || names.has(i.location)) continue;
-    const p=findPlace(i.location); if(p){ i.location=p.name; i.updatedAt=now; n++; }
-  }
-  return n;
-}
-
 function quickAdd(){
   const v = $("quickIn").value; if(!v.trim()) return;
   const p = parseQuick(v);
-  if(!p){ openItem({name:v.trim()}); return; }
+  if(!p){ $("quickIn").value=""; openItem({name:cap(v.trim())}); return; }
   const known = findPlace(p.location);
   if(known) p.location = known.name;
   else {
@@ -549,108 +794,152 @@ function quickAdd(){
   }
   const existing = live(S.data.items).find(i=>norm(i.name)===norm(p.name));
   if(existing){
-    if(norm(existing.location)!==norm(p.location)){
-      existing.location=p.location; existing.updatedAt=Date.now(); touch();
-      toast(`${existing.name} déplacé : ${p.location}`);
-    } else toast(`${existing.name} est déjà noté à : ${p.location}`);
+    if(norm(existing.location)!==norm(p.location)){ existing.location=p.location; existing.updatedAt=Date.now(); touch(); toast(`${existing.name} déplacé : ${p.location}`); }
+    else toast(`${existing.name} est déjà noté à : ${p.location}`);
   } else {
-    S.data.items.push({id:uid(), name:p.name, location:p.location, notes:"", updatedAt:Date.now()}); touch();
+    S.data.items.push({id:uid(), name:p.name, location:p.location, category:"", notes:"", updatedAt:Date.now()}); touch();
     toast(`✓ ${p.name} → ${p.location}`);
   }
   $("quickIn").value=""; render();
 }
 
-/* ---- fenêtres d'édition ---- */
+/* ---- fenêtres ---- */
 function modal(html, onReady){
   const root=$("modalRoot");
   root.innerHTML = `<div class="backdrop"><div class="sheet">${html}</div></div>`;
   const bd = root.firstElementChild;
-  bd.addEventListener("click", e=>{ if(e.target===bd) close(); });
-  function close(){ root.innerHTML=""; }
+  bd.addEventListener("click", e=>{ if(e.target===bd && !bd.dataset.busy) close(); });
+  function close(){ if(root.firstElementChild===bd) root.innerHTML=""; }
   onReady(bd, close);
+  return bd;
 }
-function locOptions(current){
-  const declared = live(S.data.places||[]);
-  const groups = {};
-  for(const p of declared) (groups[p.room||"Autres rangements"] ||= []).push(p.name);
-  const declaredNames = new Set(declared.map(p=>p.name));
-  const loose = [...new Set(live(S.data.items).map(i=>i.location).filter(l=>l && !declaredNames.has(l)))];
-  if(current && !declaredNames.has(current) && !loose.includes(current)) loose.push(current);
-  if(loose.length) (groups["Non classés"] ||= []).push(...loose);
-  const order = Object.keys(groups).sort((a,b)=>{ const r=x=>x==="Non classés"?2:x==="Autres rangements"?1:0; return r(a)-r(b) || a.localeCompare(b,"fr"); });
-  let h = `<option value="">— Choisir un rangement —</option>`;
-  for(const g of order) h += `<optgroup label="${esc(g)}">` + groups[g].sort((a,b)=>a.localeCompare(b,"fr")).map(n=>`<option value="${esc(n)}"${n===current?" selected":""}>${esc(n)}</option>`).join("") + `</optgroup>`;
-  h += `<option value="__new">＋ Nouveau rangement…</option>`;
-  return h;
+
+/* fiche détaillée d'un objet */
+function openDetail(it){
+  const room = roomOfPlace(it.location);
+  modal(`<div class="hero" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}" data-kind="full">`:""}</div>
+    <h2>${esc(it.name)}</h2>
+    <div class="kv">
+      <div class="k">Rangement</div><div><strong>📍 ${esc(it.location||"—")}</strong></div>
+      <div class="k">Pièce</div><div>${esc(room||"—")}</div>
+      <div class="k">Catégorie</div><div>${it.category?esc(catIcon(it.category)+" "+it.category):"—"}</div>
+      ${it.notes?`<div class="k">Précisions</div><div>${esc(it.notes)}</div>`:""}
+      <div class="k">Mis à jour</div><div>${fmtDate(it.updatedAt)}</div>
+    </div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="dClose">Fermer</button><button class="btn" id="dEdit">Modifier</button></div>`,
+  (bd, close)=>{
+    const img = bd.querySelector("img[data-pid]");
+    if(img){ loadPhotoURL(it.photo.id,"thumb").then(u=>{ if(u && !img.classList.contains("full")){ img.src=u; img.classList.add("ok"); } });
+      loadPhotoURL(it.photo.id,"full").then(u=>{ if(u){ img.src=u; img.classList.add("ok","full"); } }); }
+    bd.querySelector("#dClose").onclick=close;
+    bd.querySelector("#dEdit").onclick=()=>openItem(it);
+  });
 }
+
+/* formulaire objet */
 function openItem(existing){
   const it = existing && existing.id ? existing : null;
-  const startNew = !!existing?.newLocName || !live(S.data.places||[]).length && !live(S.data.items).length;
+  const noPlaces = !live(S.data.places).length && !live(S.data.items).some(i=>i.location);
+  let newPhoto=null, removePhoto=false;
   modal(`<h2>${it?"Modifier l'objet":"Nouvel objet rangé"}</h2>
     <label>Objet</label><input class="field" id="fName" value="${esc(existing?.name||"")}" placeholder="ex. Tente">
-    <label>Où est-il rangé ?</label><select class="field" id="fLoc">${locOptions(existing?.location||"")}</select>
+    <label>Photo (facultatif)</label>
+    <div class="photo-edit">
+      <div class="ph" id="fPh" data-emoji="📷">${it?.photo?`<img alt="" data-pid="${esc(it.photo.id)}">`:""}</div>
+      <div class="btns"><button class="btn ghost small" id="fPhBtn">${it?.photo?"Changer la photo":"Ajouter une photo"}</button>
+      <button class="btn danger small${it?.photo?"":" hidden"}" id="fPhDel">Retirer</button></div>
+      <input type="file" id="fPhFile" accept="image/*" class="hidden">
+    </div>
+    <label>Où est-il rangé ?</label><select class="field" id="fLoc">${optionsHTML(placeGroups(), existing?.location||"", "— Choisir un rangement —", "Nouveau rangement")}</select>
     <div id="fNewBox" class="newbox hidden">
       <label>Nom du nouveau rangement</label><input class="field" id="fNewName" value="${esc(existing?.newLocName||"")}" placeholder="ex. Armoire de la terrasse">
-      <label>Pièce</label><input class="field" id="fNewRoom" list="roomsDL" placeholder="ex. Terrasse">
+      <label>Pièce</label><select class="field" id="fNewRoom">${optionsHTML(roomGroups(), "", "— Choisir une pièce —", "Nouvelle pièce")}</select>
+      <div id="fNewRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="fNewRoomName" placeholder="ex. Véranda"></div>
     </div>
+    <label>Catégorie</label><select class="field" id="fCat">${optionsHTML(catGroups(), existing?.category||"", "— Choisir une catégorie —", "Nouvelle catégorie")}</select>
+    <div id="fCatBox" class="newbox hidden"><label>Nom de la nouvelle catégorie</label><input class="field" id="fCatName" placeholder="ex. Matériel de plongée"></div>
     <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
     <div class="actions">${it?`<button class="btn danger" id="fDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="fCancel">Annuler</button><button class="btn" id="fSave">Enregistrer</button></div>`,
   (bd, close)=>{
-    const sel=bd.querySelector("#fLoc"), box=bd.querySelector("#fNewBox");
-    const sync=()=>box.classList.toggle("hidden", sel.value!=="__new");
-    if(startNew) sel.value="__new";
-    sync();
-    sel.onchange=()=>{ sync(); if(sel.value==="__new") bd.querySelector("#fNewName").focus(); };
-    setTimeout(()=>bd.querySelector(!existing?.name ? "#fName" : existing?.newLocName ? "#fNewRoom" : "#fLoc").focus(), 60);
+    const sel=bd.querySelector("#fLoc");
+    if(existing?.newLocName || noPlaces) sel.value="__new";
+    bindNew(bd,"fLoc","fNewBox","fNewName"); bindNew(bd,"fNewRoom","fNewRoomBox","fNewRoomName"); bindNew(bd,"fCat","fCatBox","fCatName");
+    hydratePhotos(bd);
+    const ph=bd.querySelector("#fPh"), file=bd.querySelector("#fPhFile");
+    bd.querySelector("#fPhBtn").onclick=()=>file.click();
+    file.onchange=async()=>{
+      const f=file.files[0]; file.value=""; if(!f) return;
+      try{ newPhoto = await makePhoto(f); removePhoto=false;
+        ph.innerHTML = `<img alt="" class="ok" src="${URL.createObjectURL(newPhoto.thumb)}">`;
+        bd.querySelector("#fPhDel").classList.remove("hidden"); bd.querySelector("#fPhBtn").textContent="Changer la photo";
+      }catch(e){ toast("Impossible de lire cette image."); }
+    };
+    bd.querySelector("#fPhDel").onclick=()=>{ newPhoto=null; removePhoto=!!it?.photo; ph.innerHTML=""; bd.querySelector("#fPhDel").classList.add("hidden"); bd.querySelector("#fPhBtn").textContent="Ajouter une photo"; };
+    setTimeout(()=>{ const f = !existing?.name ? "#fName" : existing?.newLocName ? "#fNewName" : null; if(f) bd.querySelector(f).focus(); }, 60);
     bd.querySelector("#fCancel").onclick=close;
-    bd.querySelector("#fSave").onclick=()=>{
-      const name=bd.querySelector("#fName").value.trim(), notes=bd.querySelector("#fNotes").value.trim();
+    bd.querySelector("#fSave").onclick=async()=>{
+      const btn=bd.querySelector("#fSave");
+      const name=cap(bd.querySelector("#fName").value.trim()), notes=bd.querySelector("#fNotes").value.trim();
       if(!name) return bd.querySelector("#fName").focus();
       let location = sel.value;
       if(location==="__new"){
-        const nn=bd.querySelector("#fNewName").value.trim(), room=bd.querySelector("#fNewRoom").value.trim();
+        const nn=cap(bd.querySelector("#fNewName").value.trim());
         if(!nn) return bd.querySelector("#fNewName").focus();
+        const room = readRoom(bd,"fNewRoom","fNewRoomName");
         const ex=findPlace(nn);
         if(ex){ location=ex.name; if(room && !ex.room){ ex.room=room; ex.updatedAt=Date.now(); } toast(`Rangement existant utilisé : ${ex.name}`); }
         else { S.data.places.push({id:uid(),name:nn,room,notes:"",updatedAt:Date.now()}); location=nn; }
       }
-      if(it) Object.assign(it,{name,location,notes,updatedAt:Date.now()});
-      else {
+      let category = bd.querySelector("#fCat").value;
+      if(category==="__new") category = ensureCat(bd.querySelector("#fCatName").value);
+      let target = it;
+      if(!target){
         const dup = live(S.data.items).find(i=>norm(i.name)===norm(name));
-        if(dup && confirm(`« ${dup.name} » existe déjà (${dup.location||"sans lieu"}). Le déplacer ici plutôt que créer un doublon ?`)) Object.assign(dup,{location,notes:notes||dup.notes,updatedAt:Date.now()});
-        else S.data.items.push({id:uid(),name,location,notes,updatedAt:Date.now()});
+        if(dup && confirm(`« ${dup.name} » existe déjà (${dup.location||"sans rangement"}). Mettre à jour cette fiche plutôt que créer un doublon ?`)) target = dup;
       }
+      // photo
+      let photo = target?.photo || null;
+      if(newPhoto){
+        btn.disabled=true; btn.textContent="Envoi de la photo…"; bd.dataset.busy="1";
+        const pid = uid();
+        try{ await uploadPhoto(pid, newPhoto); if(photo) deletePhoto(photo.id); photo={id:pid}; }
+        catch(e){ toast("Photo non envoyée : "+(e.message||"connexion ?")); btn.disabled=false; btn.textContent="Enregistrer"; delete bd.dataset.busy; return; }
+      } else if(removePhoto && photo){ deletePhoto(photo.id); photo=null; }
+      const fields = {name, location, category, notes, photo, updatedAt:Date.now()};
+      if(target) Object.assign(target, fields); else S.data.items.push({id:uid(), ...fields});
       touch(); close(); $("quickIn").value=""; render();
     };
-    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
+    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ if(it.photo) deletePhoto(it.photo.id); it.deleted=true; it.photo=null; it.updatedAt=Date.now(); touch(); close(); render(); } };
   });
 }
+
+/* formulaire rangement */
 function openPlace(p, presetName){
-  const count = presetName ? live(S.data.items).filter(i=>norm(i.location)===norm(presetName)).length : 0;
   modal(`<h2>${p?"Modifier le rangement":"Nouveau rangement"}</h2>
     <label>Nom du rangement</label><input class="field" id="pName" value="${esc(p?.name||presetName||"")}" placeholder="ex. Armoire de la terrasse">
-    <label>Pièce</label><input class="field" id="pRoom" list="roomsDL" value="${esc(p?.room||"")}" placeholder="ex. Terrasse">
+    <label>Pièce</label><select class="field" id="pRoom">${optionsHTML(roomGroups(), p?.room||"", "— Choisir une pièce —", "Nouvelle pièce")}</select>
+    <div id="pRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="pRoomName" placeholder="ex. Véranda"></div>
     <label>Description (facultatif)</label><textarea class="field" id="pNotes" placeholder="ex. grande armoire blanche, 3 étagères">${esc(p?.notes||"")}</textarea>
     <div class="actions">${p?`<button class="btn danger" id="pDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="pCancel">Annuler</button><button class="btn" id="pSave">Enregistrer</button></div>`,
   (bd, close)=>{
+    bindNew(bd,"pRoom","pRoomBox","pRoomName");
     setTimeout(()=>bd.querySelector(presetName&&!p?"#pRoom":"#pName").focus(), 60);
     bd.querySelector("#pCancel").onclick=close;
     bd.querySelector("#pSave").onclick=()=>{
-      const name=bd.querySelector("#pName").value.trim(), room=bd.querySelector("#pRoom").value.trim(), notes=bd.querySelector("#pNotes").value.trim();
+      const name=cap(bd.querySelector("#pName").value.trim()), notes=bd.querySelector("#pNotes").value.trim();
       if(!name) return bd.querySelector("#pName").focus();
+      if(bd.querySelector("#pRoom").value==="__new" && !bd.querySelector("#pRoomName").value.trim()) return bd.querySelector("#pRoomName").focus();
+      const room = readRoom(bd,"pRoom","pRoomName");
       const oldName = p?.name || presetName;
       const dup = live(S.data.places).find(x=>x!==p && norm(x.name)===norm(name));
-      if(dup && !(oldName && norm(oldName)===norm(name))) { alert("Ce rangement existe déjà."); return; }
+      if(dup && !(oldName && norm(oldName)===norm(name))){ alert("Ce rangement existe déjà."); return; }
       const now = Date.now();
       if(p) Object.assign(p,{name,room,notes,updatedAt:now});
       else S.data.places.push({id:uid(),name,room,notes,updatedAt:now});
-      if(oldName && norm(oldName)!==norm(name)){
-        for(const i of live(S.data.items)) if(norm(i.location)===norm(oldName)){ i.location=name; i.updatedAt=now; }
-      }
-      normalizeLocations();
-      touch(); close(); render();
+      if(oldName && norm(oldName)!==norm(name)) for(const i of live(S.data.items)) if(norm(i.location)===norm(oldName)){ i.location=name; i.updatedAt=now; }
+      normalizeLocations(); touch(); close(); render();
     };
     if(p) bd.querySelector("#pDel").onclick=()=>{
       const n = live(S.data.items).filter(i=>norm(i.location)===norm(p.name)).length;
@@ -658,11 +947,45 @@ function openPlace(p, presetName){
     };
   });
 }
+
+/* pièces & catégories : renommer / supprimer */
+function openListItem(kind, id){
+  const isCat = kind==="cats", x = id ? S.data[kind].find(e=>e.id===id) : null;
+  const label = isCat ? "catégorie" : "pièce";
+  modal(`<h2>${x?"Modifier la "+label:(isCat?"Nouvelle catégorie":"Nouvelle pièce")}</h2>
+    <label>Nom</label><input class="field" id="lName" value="${esc(x?.name||"")}">
+    ${isCat?`<label>Icône (un émoji)</label><input class="field" id="lIcon" value="${esc(x?.icon||"📦")}" maxlength="4">`:""}
+    <div class="actions">${x?`<button class="btn danger" id="lDel">Supprimer</button>`:""}<span class="spacer"></span>
+      <button class="btn ghost" id="lCancel">Annuler</button><button class="btn" id="lSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    setTimeout(()=>bd.querySelector("#lName").focus(), 60);
+    bd.querySelector("#lCancel").onclick=close;
+    const refs = n => isCat ? live(S.data.items).filter(i=>i.category===n) : live(S.data.places).filter(p=>p.room===n);
+    bd.querySelector("#lSave").onclick=()=>{
+      const name=cap(bd.querySelector("#lName").value.trim()); if(!name) return;
+      if(live(S.data[kind]).some(e=>e!==x && norm(e.name)===norm(name))){ alert("Ce nom existe déjà."); return; }
+      const now=Date.now();
+      if(x){
+        for(const r of refs(x.name)){ r[isCat?"category":"room"]=name; r.updatedAt=now; }
+        Object.assign(x,{name,updatedAt:now}); if(isCat) x.icon=bd.querySelector("#lIcon").value.trim()||"📦";
+      } else S.data[kind].push({id:uid(), name, ...(isCat?{icon:bd.querySelector("#lIcon").value.trim()||"📦"}:{}), updatedAt:now});
+      touch(); close(); render();
+    };
+    if(x) bd.querySelector("#lDel").onclick=()=>{
+      const n=refs(x.name).length;
+      if(!confirm(`Supprimer la ${label} « ${x.name} » ?`+(n?`\n${n} ${isCat?"objet(s)":"rangement(s)"} n'auront plus de ${label}.`:""))) return;
+      const now=Date.now(); for(const r of refs(x.name)){ r[isCat?"category":"room"]=""; r.updatedAt=now; }
+      x.deleted=true; x.updatedAt=now; touch(); close(); render();
+    };
+  });
+}
+
+/* infos maison */
 function openInfo(it){
   modal(`<h2>${it?"Modifier l'info":"Nouvelle info maison"}</h2>
     <label>Sujet</label><input class="field" id="iTitle" value="${esc(it?.title||"")}" placeholder="ex. Poubelle cuisine">
     <label>Information à retenir</label><input class="field" id="iVal" value="${esc(it?.value||"")}" placeholder="ex. Sacs poubelle de 20 L">
-    <label>Catégorie</label><input class="field" id="iCat" list="catsDL" value="${esc(it?.category||"")}" placeholder="ex. Courses">
+    <label>Catégorie</label><input class="field" id="iCat" list="infoCatsDL" value="${esc(it?.category||"")}" placeholder="ex. Courses">
     <label>Détails (facultatif)</label><textarea class="field" id="iNotes" placeholder="ex. marque, référence, où l'acheter…">${esc(it?.notes||"")}</textarea>
     <div class="actions">${it?`<button class="btn danger" id="iDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="iCancel">Annuler</button><button class="btn" id="iSave">Enregistrer</button></div>`,
@@ -680,13 +1003,201 @@ function openInfo(it){
     if(it) bd.querySelector("#iDel").onclick=()=>{ if(confirm(`Supprimer « ${it.title} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
   });
 }
+
+/* ================= COURSES ================= */
+function findProduct(name){
+  const prods = live(S.data.products), cands=[];
+  for(const p of prods){ cands.push(p.name); for(const a of p.aliases||[]) cands.push(a); }
+  const hit = closest(name, cands, 9);
+  return hit ? prods.find(p=>p.name===hit || (p.aliases||[]).includes(hit)) : null;
+}
+function addPurchase(name, ts, qty, receiptId){
+  name = cap(name.trim()); if(!name) return;
+  let p = findProduct(name);
+  if(!p){ p={id:uid(), name, aliases:[], history:[], status:"reste", lastDate:ts}; S.data.products.push(p); }
+  else if(norm(name)!==norm(p.name) && !(p.aliases||[]).some(a=>norm(a)===norm(name))) (p.aliases ||= []).push(name);
+  (p.history ||= []).push({date:ts, qty:qty||1, receiptId:receiptId||null});
+  p.lastDate = Math.max(p.lastDate||0, ts); p.status="reste"; p.updatedAt=Date.now();
+}
+function openProduct(p){
+  const hist = [...(p.history||[])].sort((a,b)=>b.date-a.date);
+  modal(`<h2>${esc(p.name)}</h2>
+    <label>Nom de l'article</label><input class="field" id="prName" value="${esc(p.name)}">
+    <div class="hint">Le nom lu sur les tickets est retenu : les prochains tickets reconnaîtront cet article.</div>
+    <label>Statut</label>
+    <div class="seg" id="prSeg" style="margin-top:0"><button data-s="reste" class="${p.status!=="fini"?"on":""}">✓ Il en reste</button><button data-s="fini" class="${p.status==="fini"?"on":""}">✗ Fini</button></div>
+    <label>Historique d'achat</label>
+    <div class="card" style="padding:4px 12px">${hist.map(h=>`<div class="sub" style="cursor:default"><span>${fmtDate(h.date)}</span><span class="meta">${h.qty>1?"× "+h.qty:""}</span></div>`).join("") || `<div class="meta" style="padding:8px 0">—</div>`}</div>
+    ${(p.aliases||[]).length?`<div class="hint">Aussi lu comme : ${esc(p.aliases.join(", "))}</div>`:""}
+    <div class="actions"><button class="btn danger" id="prDel">Supprimer</button><span class="spacer"></span>
+      <button class="btn ghost" id="prCancel">Annuler</button><button class="btn" id="prSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    let status = p.status||"reste";
+    bd.querySelectorAll("#prSeg button").forEach(b=>b.onclick=()=>{ status=b.dataset.s; bd.querySelectorAll("#prSeg button").forEach(x=>x.classList.toggle("on", x===b)); });
+    bd.querySelector("#prCancel").onclick=close;
+    bd.querySelector("#prSave").onclick=()=>{
+      const name=cap(bd.querySelector("#prName").value.trim()); if(!name) return;
+      if(norm(name)!==norm(p.name) && !(p.aliases||[]).some(a=>norm(a)===norm(p.name))) (p.aliases ||= []).push(p.name);
+      Object.assign(p,{name,status,updatedAt:Date.now()}); touch(); close(); render();
+    };
+    bd.querySelector("#prDel").onclick=()=>{ if(confirm(`Supprimer « ${p.name} » et son historique ?`)){ p.deleted=true; p.updatedAt=Date.now(); touch(); close(); render(); } };
+  });
+}
+function openManualPurchase(){
+  $("prodDL").innerHTML = live(S.data.products).sort(byName).map(p=>`<option value="${esc(p.name)}">`).join("");
+  modal(`<h2>Ajouter un achat</h2>
+    <label>Article</label><input class="field" id="mName" list="prodDL" placeholder="ex. Sacs poubelle 20 L">
+    <label>Quantité</label><input class="field" id="mQty" type="number" min="1" value="1" inputmode="numeric">
+    <label>Date d'achat</label><input class="field" id="mDate" type="date" value="${isoDay(Date.now())}">
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="mCancel">Annuler</button><button class="btn" id="mSave">Ajouter</button></div>`,
+  (bd, close)=>{
+    setTimeout(()=>bd.querySelector("#mName").focus(), 60);
+    bd.querySelector("#mCancel").onclick=close;
+    bd.querySelector("#mSave").onclick=()=>{
+      const name=bd.querySelector("#mName").value.trim(); if(!name) return bd.querySelector("#mName").focus();
+      addPurchase(name, dayTs(bd.querySelector("#mDate").value||isoDay(Date.now())), +bd.querySelector("#mQty").value||1, null);
+      touch(); close(); render(); toast("✓ Achat ajouté");
+    };
+  });
+}
+function openReceipt(r){
+  modal(`<h2>${esc(r.store||"Ticket")} · ${fmtDate(r.date)}</h2>
+    <div class="card" style="padding:4px 12px">${(r.lines||[]).map(l=>`<div class="sub" style="cursor:default"><span>${esc(l.name)}</span><span class="meta">${l.qty>1?"× "+l.qty:""}</span></div>`).join("")}</div>
+    <div class="actions"><button class="btn danger" id="rDel">Supprimer le ticket</button><span class="spacer"></span><button class="btn ghost" id="rClose">Fermer</button></div>`,
+  (bd, close)=>{
+    bd.querySelector("#rClose").onclick=close;
+    bd.querySelector("#rDel").onclick=()=>{
+      if(!confirm("Supprimer ce ticket et retirer ses achats de l'historique ?")) return;
+      const now=Date.now();
+      for(const p of live(S.data.products)){
+        const h=(p.history||[]).filter(x=>x.receiptId!==r.id);
+        if(h.length===(p.history||[]).length) continue;
+        p.history=h; p.updatedAt=now;
+        if(!h.length) p.deleted=true; else p.lastDate=Math.max(...h.map(x=>x.date));
+      }
+      r.deleted=true; r.updatedAt=now; touch(); close(); render();
+    };
+  });
+}
+
+/* ---- lecture du ticket (OCR) ---- */
+let tessP=null;
+function loadTesseract(){
+  return tessP ||= new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload=()=>res(window.Tesseract);
+    s.onerror=()=>{ tessP=null; s.remove(); rej(new Error("Impossible de charger le module de lecture (vérifie ta connexion).")); };
+    document.head.appendChild(s);
+  });
+}
+async function prepareReceipt(file){
+  const img = await loadImage(file);
+  let w=img.naturalWidth, h=img.naturalHeight; const s = Math.min(2200/Math.max(w,h), Math.max(1, 1400/w));
+  w=Math.round(w*s); h=Math.round(h*s);
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const g=c.getContext("2d"); g.drawImage(img,0,0,w,h);
+  const d=g.getImageData(0,0,w,h), px=d.data;
+  let lo=255, hi=0; const gray=new Uint8ClampedArray(w*h);
+  for(let i=0,j=0;i<px.length;i+=4,j++){ const v=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)|0; gray[j]=v; }
+  const hist=new Uint32Array(256); for(const v of gray) hist[v]++;
+  let acc=0; for(let v=0;v<256;v++){ acc+=hist[v]; if(acc>gray.length*0.02){ lo=v; break; } }
+  acc=0; for(let v=255;v>=0;v--){ acc+=hist[v]; if(acc>gray.length*0.02){ hi=v; break; } }
+  const span=Math.max(1,hi-lo);
+  for(let i=0,j=0;i<px.length;i+=4,j++){ const v=Math.max(0,Math.min(255,((gray[j]-lo)*255/span)|0)); px[i]=px[i+1]=px[i+2]=v; }
+  g.putImageData(d,0,0);
+  return c;
+}
+async function ocrReceipt(file, onProgress){
+  const T = await loadTesseract();
+  onProgress(5, "Préparation de l'image…");
+  const canvas = await prepareReceipt(file);
+  onProgress(10, "Chargement du dictionnaire français (la 1ʳᵉ fois seulement)…");
+  const worker = await T.createWorker("fra", 1, {logger:m=>{ if(m.status==="recognizing text") onProgress(15+Math.round(m.progress*85), "Lecture du ticket…"); }});
+  try{ const {data} = await worker.recognize(canvas); return data.text||""; }
+  finally{ worker.terminate().catch(()=>{}); }
+}
+const SKIP = /(sous[- ]?total|s\/?total|\btotal|\btva\b|\btgc\b|\btss\b|net a payer|a payer|\bcb\b|carte|visa|mastercard|esp[eè]ces|rendu|monnaie|merci|ticket|caisse|caissi[eè]re?|h[oô]tesse|\bdate\b|heure|siret|ridet|\brcs\b|\bt[ée]l\b|t[ée]l[ée]phone|www\.|http|fid[ée]lit|\bpoints?\b|solde|paiement|r[eè]glement|nb\.? ?art|nombre d|bonjour|au revoir|bienvenue|transaction|autorisation|montant|d[ée]bit|cr[ée]dit|terminal|\bclient|[ée]conomis|avantage|\bht\b|\bttc\b|cumul|cagnotte|bon d'achat|\bvendeur|n° ?\d|code ?barre|ouvert|horaires)/i;
+const PRICE = /\s(-?\d{1,3}(?:[ .]\d{3})+|-?\d+)(?:[.,](\d{1,2}))?\s*(?:f|xpf|cfp|€|eur|e)?\s*[a-z*]{0,2}\s*$/i;
+function cleanName(n){
+  n = n.replace(/^\d{6,}\s*/,"").replace(/[^\p{L}\p{N}%.,'’\/&+ -]/gu," ").replace(/\s+/g," ").trim();
+  n = n.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}%.)]+$/gu,"").trim();
+  return cap(n.toLowerCase());
+}
+function parseReceipt(text){
+  const raw = text.split(/\r?\n/).map(l=>l.replace(/[|_~«»"]+/g," ").replace(/\s+/g," ").trim()).filter(Boolean);
+  let date=null;
+  for(const l of raw){ const m=l.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/); if(m){ let [_,d,mo,y]=m.map(Number); if(y<100) y+=2000; if(d>=1&&d<=31&&mo>=1&&mo<=12&&y>=2015&&y<=2100){ date=isoDay(new Date(y,mo-1,d,12)); break; } } }
+  let store="";
+  for(const l of raw.slice(0,4)){ if(/\p{L}{3}/u.test(l) && !SKIP.test(l) && !PRICE.test(" "+l)){ store=cap(l.toLowerCase().replace(/[^\p{L}\p{N}' &-]/gu,"").trim()); break; } }
+  const lines=[]; let pending=null;
+  for(const l of raw){
+    const qm = l.match(/^(\d+)\s*[xX*×]\s*\d/);
+    if(qm && lines.length){ lines[lines.length-1].qty = +qm[1]; continue; }
+    if(SKIP.test(l)){ pending=null; continue; }
+    const pm = (" "+l).match(PRICE);
+    if(!pm){ pending = /\p{L}{3}/u.test(l) ? l : null; continue; }
+    if(pm[1].startsWith("-")) { pending=null; continue; }
+    let name = (" "+l).slice(0, pm.index).trim();
+    if(!/\p{L}{2}/u.test(name)){ if(pending) name=pending; else continue; }
+    pending=null;
+    let qty=1; const q2=name.match(/^(\d{1,2})\s*[xX*×]\s+(.*)$/); if(q2){ qty=+q2[1]; name=q2[2]; }
+    name = cleanName(name);
+    if(name.length<3 || !/\p{L}{2}/u.test(name)) continue;
+    const ex = lines.find(x=>norm(x.name)===norm(name));
+    if(ex) ex.qty += qty; else lines.push({name, qty});
+  }
+  return {date, store, lines};
+}
+async function scanReceipt(file){
+  busyLong = true;
+  const bd = modal(`<h2>Lecture du ticket</h2><div class="hint" id="ocrMsg">Chargement…</div><div class="progress"><div id="ocrBar"></div></div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="ocrCancel">Annuler</button></div>`, (bd, close)=>{
+      bd.dataset.busy="1"; bd.querySelector("#ocrCancel").onclick=()=>{ bd.dataset.cancel="1"; delete bd.dataset.busy; close(); };
+    });
+  try{
+    const text = await ocrReceipt(file, (pct,msg)=>{ const b=bd.querySelector("#ocrBar"); if(b) b.style.width=pct+"%"; const m=bd.querySelector("#ocrMsg"); if(m&&msg) m.textContent=msg; });
+    if(bd.dataset.cancel) return;
+    const parsed = parseReceipt(text);
+    openReceiptReview(parsed);
+  }catch(e){ if(!bd.dataset.cancel){ $("modalRoot").innerHTML=""; toast(e.message||"Lecture impossible."); } }
+  finally{ busyLong=false; }
+}
+function openReceiptReview(parsed){
+  const rowHTML = l => `<div class="rrow"><input class="field rname" value="${esc(l.name)}" placeholder="Article"><input class="field rqty" type="number" min="1" inputmode="numeric" value="${l.qty||1}"><button title="Retirer" data-rm>✕</button></div>`;
+  modal(`<h2>Vérifie la liste</h2>
+    <div class="hint">${parsed.lines.length ? `${parsed.lines.length} article(s) lus. Corrige les noms si besoin, retire ce qui n'est pas un article (✕), ajoute ce qui manque.` : "Je n'ai pas réussi à lire d'article. Ajoute-les à la main, ou reprends une photo plus nette, bien à plat et éclairée."}</div>
+    <label>Magasin</label><input class="field" id="rvStore" value="${esc(parsed.store)}" placeholder="ex. Casino Dumbéa">
+    <label>Date d'achat</label><input class="field" id="rvDate" type="date" value="${parsed.date||isoDay(Date.now())}">
+    <label>Articles · quantité</label>
+    <div id="rvRows">${parsed.lines.map(rowHTML).join("")}</div>
+    <button class="btn ghost small" id="rvAdd" style="margin-top:8px">+ Ajouter une ligne</button>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="rvCancel">Annuler</button><button class="btn" id="rvSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    const rows=bd.querySelector("#rvRows");
+    rows.addEventListener("click", e=>{ if(e.target.closest("[data-rm]")) e.target.closest(".rrow").remove(); });
+    bd.querySelector("#rvAdd").onclick=()=>{ rows.insertAdjacentHTML("beforeend", rowHTML({name:"",qty:1})); rows.lastElementChild.querySelector(".rname").focus(); };
+    bd.querySelector("#rvCancel").onclick=()=>{ if(confirm("Abandonner ce ticket ?")) close(); };
+    bd.querySelector("#rvSave").onclick=()=>{
+      const lines=[...rows.querySelectorAll(".rrow")].map(r=>({name:cap(r.querySelector(".rname").value.trim()), qty:Math.max(1,+r.querySelector(".rqty").value||1)})).filter(l=>l.name);
+      if(!lines.length){ alert("Aucun article à enregistrer."); return; }
+      const ts = dayTs(bd.querySelector("#rvDate").value||isoDay(Date.now()));
+      const rid = uid();
+      S.data.receipts.push({id:rid, date:ts, store:bd.querySelector("#rvStore").value.trim(), lines, updatedAt:Date.now()});
+      for(const l of lines) addPurchase(l.name, ts, l.qty, rid);
+      touch(); close(); courseFilter="all"; render(); toast(`✓ ${lines.length} article(s) enregistrés`);
+    };
+  });
+}
+
+/* ================= RÉGLAGES ================= */
 function changePassword(){
   modal(`<h2>Changer le mot de passe</h2>
-    <div class="hint">Tes autres appareils devront ensuite être reconnectés avec le nouveau mot de passe (« Oublier cet appareil » puis reconnexion).</div>
+    <div class="hint">Tes autres appareils devront ensuite être reconnectés avec le nouveau mot de passe (« Oublier cet appareil » puis reconnexion). Les photos sont rechiffrées : garde l'app ouverte jusqu'à la fin.</div>
     <label>Mot de passe actuel</label><input class="field" id="cOld" type="password">
     <label>Nouveau mot de passe</label><input class="field" id="cNew" type="password" autocomplete="new-password">
     <label>Confirmer</label><input class="field" id="cNew2" type="password" autocomplete="new-password">
-    <div class="err" id="cErr"></div>
+    <div class="err" id="cErr"></div><div class="hint" id="cProg"></div>
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="cCancel">Annuler</button><button class="btn" id="cOk">Changer</button></div>`,
   (bd, close)=>{
     bd.querySelector("#cCancel").onclick=close;
@@ -695,63 +1206,83 @@ function changePassword(){
       if(o!==S.pw) return err.textContent="Mot de passe actuel incorrect.";
       if(n.length<8) return err.textContent="8 caractères minimum.";
       if(n!==n2) return err.textContent="Les mots de passe ne correspondent pas.";
-      bd.querySelector("#cOk").disabled=true;
+      bd.querySelector("#cOk").disabled=true; bd.dataset.busy="1"; busyLong=true;
       try{
         await sync();
-        const remote = await ghGet(S.cfg, S.token);
         const salt = b64(rnd(16));
-        const blob = await encryptStr(n, JSON.stringify(S.data), salt);
-        S.sha = await ghPut(S.cfg, S.token, blob, remote?.sha);
+        const photos = live(S.data.items).filter(i=>i.photo).map(i=>i.photo.id);
+        let k=0;
+        for(const pid of photos){
+          for(const kind of ["thumb","full"]){
+            const f = await ghGetFile(S.cfg, S.token, photoPath(pid,kind)); if(!f) continue;
+            const bytes = await decryptBytes(o, JSON.parse(f.text));
+            const enc = JSON.stringify(await encryptBytes(n, bytes, salt));
+            await ghPutFile(S.cfg, S.token, photoPath(pid,kind), enc, f.sha, "Photo");
+            await idb.set(photoPath(pid,kind), enc);
+          }
+          bd.querySelector("#cProg").textContent=`Photos rechiffrées : ${++k}/${photos.length}`;
+        }
+        const remote = await ghGetFile(S.cfg, S.token, DATA_PATH);
+        await ghPutFile(S.cfg, S.token, DATA_PATH, JSON.stringify(await encryptStr(n, JSON.stringify(S.data), salt)), remote?.sha);
         S.cfg.salt = salt; S.cfg.tok = await encryptStr(n, S.token, salt);
-        S.pw = n; keyCache.clear(); ls.set(LS_CFG, S.cfg); await cacheLocal();
-        close(); toast("Mot de passe changé ✓");
-      }catch(e){ err.textContent=e.message; bd.querySelector("#cOk").disabled=false; }
+        S.pw = n; ls.set(LS_CFG, S.cfg); await cacheLocal();
+        delete bd.dataset.busy; close(); toast("Mot de passe changé ✓");
+      }catch(e){ err.textContent=e.message; bd.querySelector("#cOk").disabled=false; delete bd.dataset.busy; }
+      finally{ busyLong=false; }
     };
   });
 }
 function exportData(){
   const blob = new Blob([JSON.stringify(S.data,null,2)], {type:"application/json"});
   const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download = "ma-maison-sauvegarde-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+  a.download = "ma-maison-sauvegarde-"+isoDay(Date.now())+".json"; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 }
 function importData(file){
   const r = new FileReader();
   r.onload = ()=>{
-    try{
-      const d = JSON.parse(r.result);
-      if(!Array.isArray(d.items) || !Array.isArray(d.infos)) throw 0;
-      S.data = merge(S.data, d); touch(); render(); toast("Import fusionné ✓");
-    }catch(e){ toast("Fichier non reconnu."); }
+    try{ const d = JSON.parse(r.result); if(!Array.isArray(d.items)) throw 0;
+      S.data = merge(S.data, d); seedDefaults(); touch(); render(); toast("Import fusionné ✓"); }
+    catch(e){ toast("Fichier non reconnu."); }
   };
   r.readAsText(file);
 }
 
-/* ---- liaisons ---- */
+/* ================= LIAISONS ================= */
 $("setupBtn").onclick=doSetup;
 $("sPw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doSetup(); });
 $("unlockBtn").onclick=doUnlock;
 $("lPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doUnlock(); });
 $("forgetBtn").onclick=forget; $("forgetBtn2").onclick=forget;
 $("lockNow").onclick=lock;
+$("gearBtn").onclick=()=>setTab(tab==="settings"?"items":"settings");
 $("q").addEventListener("input", render);
 $("quickBtn").onclick=quickAdd;
 $("quickIn").addEventListener("keydown", e=>{ if(e.key==="Enter") quickAdd(); });
-$("fab").onclick=()=> tab==="infos" ? openInfo() : tab==="places" ? openPlace() : openItem();
+$("fab").onclick=()=> tab==="infos" ? openInfo() : tab==="places" ? openPlace() : tab==="courses" ? openManualPurchase() : openItem();
 $("syncNow").onclick=sync;
 $("chgPw").onclick=changePassword;
 $("exportBtn").onclick=exportData;
 $("importBtn").onclick=()=>$("importFile").click();
 $("importFile").onchange=e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=""; };
+$("scanBtn").onclick=()=>$("scanFile").click();
+$("scanFile").onchange=e=>{ const f=e.target.files[0]; e.target.value=""; if(f) scanReceipt(f); };
+document.querySelectorAll("#courseSeg button").forEach(b=>b.onclick=()=>{ courseFilter=b.dataset.f; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ $("q").value=""; setTab(b.dataset.tab); });
 document.addEventListener("click", e=>{
-  const add = e.target.closest("[data-addin]");
-  if(add){ openItem({location:add.dataset.addin}); return; }
-  const ph = e.target.closest(".place-head[data-pkey]");
-  if(ph){ const en = placeIndex.get(ph.dataset.pkey); if(en) openPlace(en.place, en.name); return; }
-  const c = e.target.closest(".item[data-id]"); if(!c) return;
-  const arr = S.data[c.dataset.kind], it = arr.find(x=>x.id===c.dataset.id);
-  c.dataset.kind==="items" ? openItem(it) : openInfo(it);
+  if(!S.data || e.target.closest("#modalRoot")) return;
+  const t = e.target;
+  let el;
+  if(el=t.closest("[data-addin]")) return openItem({location:el.dataset.addin});
+  if(el=t.closest(".place-head[data-pkey]")){ const en=placeIndex.get(el.dataset.pkey); if(en) openPlace(en.place, en.place?null:en.name); return; }
+  if(el=t.closest("[data-gcat]")){ galCat=el.dataset.gcat; render(); return; }
+  if(el=t.closest("[data-toggle]")){ const p=S.data.products.find(x=>x.id===el.dataset.toggle); if(p){ p.status=p.status==="fini"?"reste":"fini"; p.updatedAt=Date.now(); touch(); render(); } return; }
+  if(el=t.closest("[data-prod]")){ const p=S.data.products.find(x=>x.id===el.dataset.prod); if(p) openProduct(p); return; }
+  if(el=t.closest("[data-receipt]")){ const r=S.data.receipts.find(x=>x.id===el.dataset.receipt); if(r) openReceipt(r); return; }
+  if(el=t.closest("[data-listedit]")){ const [k,id]=el.dataset.listedit.split(/:(.+)/); return openListItem(k,id); }
+  if(el=t.closest("[data-addlist]")) return openListItem(el.dataset.addlist, null);
+  if(el=t.closest("[data-info]")){ const i=S.data.infos.find(x=>x.id===el.dataset.info); if(i) openInfo(i); return; }
+  if(el=t.closest("[data-open]")){ const i=S.data.items.find(x=>x.id===el.dataset.open); if(i) openDetail(i); return; }
 });
 addEventListener("online", ()=>{ if(S.pw) sync(); });
 
@@ -761,7 +1292,7 @@ if("serviceWorker" in navigator){
     document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") reg.update().catch(()=>{}); });
   }).catch(()=>{});
   let reloaded=false;
-  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!reloaded && !S.dirty){ reloaded=true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!reloaded && !S.dirty && !busyLong){ reloaded=true; location.reload(); } });
 }
 boot();
 </script>

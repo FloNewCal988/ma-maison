@@ -4,12 +4,15 @@ Petite application personnelle (iPhone + ordinateur) pour :
 
 - **Rangement** : noter où sont rangées tes affaires (« la tente dans l'armoire de la terrasse ») et les retrouver par recherche.
 - **Lieux** : créer ses rangements (armoire, tiroir, étagère…) classés par pièce, et voir ce que contient chacun.
+- **Galerie** : tous tes objets en photos, filtrables par catégorie (Camping, Outils de jardin…) ; un appui ouvre la fiche complète.
+- **Courses** : photographie un ticket de caisse → la liste des articles achetés avec la date. Chaque article a un bouton « Il en reste / Fini » pour savoir s'il faut en racheter.
 - **Infos maison** : un pense-bête de la maison (« Poubelle cuisine → sacs de 20 L »).
 
 ## 🔒 Sécurité
 
 - L'**application** (le code) est publique sur GitHub Pages : elle ne contient aucune donnée.
 - Tes **données** sont dans un **dépôt privé** séparé, dans un fichier `data.enc.json`.
+- Les **photos** sont chiffrées de la même façon, dans le dossier `photos/` du dépôt privé.
 - Ce fichier est **chiffré avec ton mot de passe** (AES-256-GCM, clé dérivée par PBKDF2-SHA256, 310 000 itérations) **sur ton téléphone, avant l'envoi**. Même si quelqu'un accédait au dépôt, il ne verrait qu'un bloc illisible.
 - Ton mot de passe n'est **jamais envoyé ni stocké**. Le jeton GitHub est stocké sur l'appareil, lui aussi chiffré avec ton mot de passe.
 - Verrouillage automatique après 10 minutes d'inactivité.
@@ -66,6 +69,13 @@ Petite application personnelle (iPhone + ordinateur) pour :
 - **Infos maison** : bouton + → Sujet `Poubelle cuisine` · Info `Sacs poubelle de 20 L` · Catégorie `Courses`.
 - **Recherche** : en haut de chaque onglet, sans se soucier des accents ni des majuscules.
 - **Hors ligne** : l'app fonctionne ; les modifications partent sur GitHub au retour du réseau.
+
+## Lecture des tickets de caisse
+
+- La lecture se fait **sur le téléphone** (OCR Tesseract, gratuit) : le ticket n'est envoyé nulle part et la photo n'est pas conservée.
+- La 1ʳᵉ fois, l'app télécharge le dictionnaire français (quelques Mo), ensuite c'est plus rapide.
+- Pour une bonne lecture : ticket **à plat**, **bien éclairé**, cadré au plus près, sans ombre.
+- Tu vérifies et corriges toujours la liste avant d'enregistrer. Quand tu renommes un article (« Pq lotus x12 » → « Papier toilette »), l'app retient l'ancien nom et reconnaîtra l'article sur les prochains tickets.
 
 ## Quand le jeton expire
 
