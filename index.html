@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma Maison</title>
+<meta name="theme-color" content="#1f6f5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ma Maison">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f5f3ee; --card:#ffffff; --text:#1d2421; --muted:#6b736f; --line:#e3e0d8;
+  --accent:#1f6f5c; --accent-soft:#dcebe5; --danger:#b3402f; --warn:#a86b00;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121614; --card:#1c2220; --text:#e8ece9; --muted:#9aa49f; --line:#2c3431;
+    --accent:#5cc2a3; --accent-soft:#1f3a32; --danger:#ff8a75; --warn:#f0b54a;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,textarea,select{font:inherit;color:inherit}
+.hidden{display:none!important}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;
+  border-bottom:1px solid var(--line)}
+header.top .row{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--accent)}.dot.busy{background:var(--warn)}.dot.err{background:var(--danger)}
+.iconbtn{border:0;background:transparent;padding:6px;border-radius:8px;cursor:pointer;color:var(--muted)}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.item{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.item .main{flex:1;min-width:0}
+.item .name{font-weight:600}
+.item .where{color:var(--accent);font-size:15px;margin-top:2px}
+.item .meta{color:var(--muted);font-size:13px;margin-top:4px;word-wrap:break-word}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:4px 4px 0 0}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.quick{display:flex;gap:8px;margin-top:12px}
+.quick input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);min-width:0}
+.btn{border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+@media (prefers-color-scheme: dark){.btn{color:#0d1a16}}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--line)}
+.btn:disabled{opacity:.5}
+.hint{color:var(--muted);font-size:13px;margin-top:6px}
+.group h3{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 2px 6px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);
+  display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .in{display:flex;max-width:720px;width:100%}
+nav.tabs button{flex:1;border:0;background:transparent;padding:10px 4px 8px;font-size:12px;color:var(--muted);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:7;width:56px;height:56px;border-radius:50%;
+  border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer}
+@media (prefers-color-scheme: dark){.fab{color:#0d1a16}}
+/* modal */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+@media (min-width:640px){.backdrop{align-items:center}}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+  max-height:90vh;overflow:auto}
+@media (min-width:640px){.sheet{border-radius:18px}}
+.sheet h2{margin:0 0 12px;font-size:19px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+.field{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+textarea.field{min-height:80px;resize:vertical}
+.actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.actions .spacer{flex:1}
+/* lock */
+.lock{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock .card{width:100%;max-width:420px}
+.lock h1{margin:0 0 4px;font-size:24px}
+.err{color:var(--danger);font-size:14px;margin-top:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:var(--text);color:var(--bg);
+  padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90vw}
+details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
+.setrow{display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+
+<!-- ========== ÉCRAN DE CONFIGURATION / VERROUILLAGE ========== -->
+<section id="setupView" class="lock hidden">
+  <div class="card">
+    <h1>🏠 Ma Maison</h1>
+    <div class="hint">Première connexion sur cet appareil. Tes données seront chiffrées avec ton mot de passe avant d'être envoyées sur GitHub.</div>
+    <label>Nom d'utilisateur GitHub</label>
+    <input class="field" id="sOwner" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ex. florianhuedro">
+    <label>Dépôt privé des données</label>
+    <input class="field" id="sRepo" autocapitalize="off" autocorrect="off" spellcheck="false" value="ma-maison-donnees">
+    <label>Jeton GitHub (fine-grained token)</label>
+    <input class="field" id="sToken" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+    <label>Mot de passe de l'app</label>
+    <input class="field" id="sPw" type="password" autocomplete="new-password">
+    <div class="hint">Si le fichier de données existe déjà (autre appareil), mets le même mot de passe.</div>
+    <label>Confirmer le mot de passe</label>
+    <input class="field" id="sPw2" type="password" autocomplete="new-password">
+    <div id="setupErr" class="err"></div>
+    <div class="actions"><button class="btn" id="setupBtn" style="flex:1">Connecter</button></div>
+  </div>
+</section>
+
+<section id="lockView" class="lock hidden">
+  <div class="card">
+    <h1>🔒 Ma Maison</h1>
+    <div class="hint" id="lockWho"></div>
+    <label>Mot de passe</label>
+    <input class="field" id="lPw" type="password" autocomplete="current-password">
+    <div id="lockErr" class="err"></div>
+    <div class="actions"><button class="btn" id="unlockBtn" style="flex:1">Déverrouiller</button></div>
+    <details><summary>Réinitialiser cet appareil</summary>
+      <div class="hint">Efface la configuration locale de cet appareil (les données sur GitHub ne sont pas touchées).</div>
+      <div class="actions"><button class="btn danger" id="forgetBtn">Oublier cet appareil</button></div>
+    </details>
+  </div>
+</section>
+
+<!-- ========== APPLICATION ========== -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="row">
+      <h1 id="title">Rangement</h1>
+      <div class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt"></span></div>
+      <button class="iconbtn" id="lockNow" title="Verrouiller" aria-label="Verrouiller">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </button>
+    </div>
+    <div class="row"><input class="search" id="q" type="search" placeholder="Rechercher…" autocomplete="off"></div>
+  </header>
+
+  <main class="wrap">
+    <!-- Rangement -->
+    <section id="tab-items">
+      <div class="quick">
+        <input id="quickIn" placeholder="ex. tente dans armoire terrasse" autocomplete="off">
+        <button class="btn" id="quickBtn">OK</button>
+      </div>
+      <div class="hint">Écris (ou dicte) « objet dans lieu ». Ex : « J'ai rangé la tente dans l'armoire de la terrasse ».</div>
+      <div class="list" id="itemsList"></div>
+    </section>
+    <!-- Lieux -->
+    <section id="tab-places" class="hidden"><div id="placesList"></div></section>
+    <!-- Infos -->
+    <section id="tab-infos" class="hidden"><div id="infosList"></div></section>
+    <!-- Réglages -->
+    <section id="tab-settings" class="hidden">
+      <div class="card setrow">
+        <strong>Synchronisation</strong>
+        <div class="hint" id="setInfo"></div>
+        <button class="btn ghost" id="syncNow">Synchroniser maintenant</button>
+      </div>
+      <div class="card setrow" style="margin-top:12px">
+        <strong>Sécurité</strong>
+        <div class="hint">Verrouillage automatique après 10 min d'inactivité. Les données sont chiffrées (AES-256) avant d'être envoyées sur GitHub.</div>
+        <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
+      </div>
+      <div class="card setrow" style="margin-top:12px">
+        <strong>Sauvegarde</strong>
+        <div class="hint">Copie lisible de tes données (à garder en lieu sûr : elle n'est pas chiffrée).</div>
+        <button class="btn ghost" id="exportBtn">Exporter (JSON)</button>
+        <button class="btn ghost" id="importBtn">Importer un JSON</button>
+        <input type="file" id="importFile" accept="application/json" class="hidden">
+      </div>
+      <div class="card setrow" style="margin-top:12px">
+        <strong>Cet appareil</strong>
+        <button class="btn danger" id="forgetBtn2">Oublier cet appareil</button>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" id="fab" aria-label="Ajouter">+</button>
+
+  <nav class="tabs"><div class="in">
+    <button data-tab="items" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Rangement</button>
+    <button data-tab="places"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Lieux</button>
+    <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Infos maison</button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
+  </div></nav>
+</div>
+
+<div id="modalRoot"></div>
+<datalist id="placesDL"></datalist>
+<datalist id="catsDL"></datalist>
+
+<script>
+"use strict";
+/* ================= CHIFFREMENT ================= */
+const ITER = 310000;
+const te = new TextEncoder(), td = new TextDecoder();
+function b64(buf){ const u=new Uint8Array(buf); let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); }
+function unb64(s){ const b=atob(s.replace(/\s/g,"")); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+function rnd(n){ return crypto.getRandomValues(new Uint8Array(n)); }
+const keyCache = new Map();
+async function deriveKey(pw, saltB64){
+  const id = saltB64; if(keyCache.has(id)) return keyCache.get(id);
+  const base = await crypto.subtle.importKey("raw", te.encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:unb64(saltB64), iterations:ITER, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+  keyCache.set(id, key); return key;
+}
+async function encryptStr(pw, str, saltB64){
+  saltB64 = saltB64 || b64(rnd(16));
+  const key = await deriveKey(pw, saltB64), iv = rnd(12);
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, te.encode(str));
+  return {v:1, alg:"AES-GCM-256/PBKDF2-SHA256", iter:ITER, salt:saltB64, iv:b64(iv), ct:b64(ct)};
+}
+async function decryptStr(pw, blob){
+  const key = await deriveKey(pw, blob.salt);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(blob.iv)}, key, unb64(blob.ct));
+  return td.decode(pt);
+}
+
+/* ================= STOCKAGE LOCAL ================= */
+const LS_CFG="mm_cfg", LS_CACHE="mm_cache";
+const ls = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* ================= GITHUB ================= */
+const DATA_PATH = "data.enc.json";
+function ghUrl(c){ return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${DATA_PATH}`; }
+function ghHeaders(token){ return {"Authorization":"Bearer "+token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28"}; }
+async function ghGet(c, token){
+  const r = await fetch(ghUrl(c)+"?t="+Date.now(), {headers:ghHeaders(token), cache:"no-store"});
+  if(r.status===404) return null;
+  if(r.status===401) throw new Error("Jeton GitHub refusé (expiré ou invalide).");
+  if(!r.ok) throw new Error("GitHub a répondu "+r.status+".");
+  const j = await r.json();
+  const txt = td.decode(unb64(j.content));
+  return {sha:j.sha, blob:JSON.parse(txt)};
+}
+async function ghPut(c, token, blob, sha){
+  const body = {message:"Mise à jour "+new Date().toISOString(), content:b64(te.encode(JSON.stringify(blob)))};
+  if(sha) body.sha = sha;
+  const r = await fetch(ghUrl(c), {method:"PUT", headers:{...ghHeaders(token),"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  if(r.status===409 || r.status===422) { const e = new Error("conflict"); e.conflict=true; throw e; }
+  if(r.status===401) throw new Error("Jeton GitHub refusé (expiré ou invalide).");
+  if(r.status===403 || r.status===404) throw new Error("Le jeton n'a pas le droit d'écrire dans ce dépôt.");
+  if(!r.ok) throw new Error("GitHub a répondu "+r.status+".");
+  const j = await r.json(); return j.content.sha;
+}
+
+/* ================= DONNÉES ================= */
+let S = { pw:null, token:null, cfg:null, data:null, sha:null, dirty:false };
+function emptyData(){ return {v:1, items:[], infos:[]}; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function merge(a, b){
+  const out = emptyData();
+  for(const k of ["items","infos"]){
+    const m = new Map();
+    for(const x of [...(a?.[k]||[]), ...(b?.[k]||[])]){
+      const cur = m.get(x.id);
+      if(!cur || (x.updatedAt||0) > (cur.updatedAt||0)) m.set(x.id, x);
+    }
+    out[k] = [...m.values()];
+  }
+  return out;
+}
+const live = arr => arr.filter(x=>!x.deleted);
+
+/* ================= SYNCHRO ================= */
+let saveTimer=null, syncing=false;
+function setSync(state, txt){
+  const d=document.getElementById("syncDot"); d.className="dot "+state;
+  document.getElementById("syncTxt").textContent=txt;
+}
+async function cacheLocal(){
+  try{ ls.set(LS_CACHE, await encryptStr(S.pw, JSON.stringify(S.data), S.cfg.salt)); }catch(e){}
+}
+function touch(){
+  S.dirty = true; cacheLocal(); setSync("busy","À envoyer…");
+  clearTimeout(saveTimer); saveTimer = setTimeout(sync, 1200);
+}
+async function sync(){
+  if(syncing){ clearTimeout(saveTimer); saveTimer=setTimeout(sync,1500); return; }
+  syncing = true; setSync("busy","Synchro…");
+  try{
+    for(let attempt=0; attempt<3; attempt++){
+      const remote = await ghGet(S.cfg, S.token);
+      let remoteData = null;
+      if(remote){
+        try{ remoteData = JSON.parse(await decryptStr(S.pw, remote.blob)); }
+        catch(e){ throw new Error("Impossible de déchiffrer les données GitHub : mot de passe différent sur un autre appareil ?"); }
+      }
+      const merged = merge(remoteData, S.data);
+      const changed = !remote || JSON.stringify(merged) !== JSON.stringify(remoteData);
+      S.data = merged;
+      if(!changed){ S.sha = remote.sha; S.dirty=false; break; }
+      try{
+        const blob = await encryptStr(S.pw, JSON.stringify(S.data), remote?.blob?.salt || S.cfg.salt);
+        S.sha = await ghPut(S.cfg, S.token, blob, remote?.sha);
+        S.dirty=false; break;
+      }catch(e){ if(!e.conflict || attempt===2) throw e; }
+    }
+    await cacheLocal(); render();
+    setSync("ok","À jour"); S.lastSync=new Date();
+  }catch(e){
+    setSync("err", navigator.onLine===false ? "Hors ligne" : "Erreur");
+    if(navigator.onLine!==false) toast(e.message);
+  }finally{ syncing=false; }
+}
+
+/* ================= DÉMARRAGE / VERROU ================= */
+const $ = id => document.getElementById(id);
+function show(view){ for(const v of ["setupView","lockView","appView"]) $(v).classList.toggle("hidden", v!==view); }
+
+async function doSetup(){
+  const owner=$("sOwner").value.trim(), repo=$("sRepo").value.trim(), token=$("sToken").value.trim();
+  const pw=$("sPw").value, pw2=$("sPw2").value, err=$("setupErr"); err.textContent="";
+  if(!owner||!repo||!token) return err.textContent="Remplis le nom d'utilisateur, le dépôt et le jeton.";
+  if(pw.length<8) return err.textContent="Mot de passe : 8 caractères minimum.";
+  if(pw!==pw2) return err.textContent="Les deux mots de passe ne correspondent pas.";
+  $("setupBtn").disabled=true; $("setupBtn").textContent="Connexion…";
+  try{
+    const cfg = {owner, repo, salt:b64(rnd(16))};
+    const remote = await ghGet(cfg, token);
+    let data = emptyData();
+    if(remote){
+      try{ data = JSON.parse(await decryptStr(pw, remote.blob)); }
+      catch(e){ throw new Error("Données trouvées sur GitHub, mais ce mot de passe ne les ouvre pas."); }
+    }
+    cfg.tok = await encryptStr(pw, token, cfg.salt);
+    ls.set(LS_CFG, cfg);
+    S = {pw, token, cfg, data, sha:remote?.sha||null};
+    startApp();
+    if(!remote) await sync();
+  }catch(e){ err.textContent = e.message.includes("fetch") ? "Connexion à GitHub impossible." : e.message; }
+  finally{ $("setupBtn").disabled=false; $("setupBtn").textContent="Connecter"; }
+}
+
+async function doUnlock(){
+  const pw=$("lPw").value, err=$("lockErr"); err.textContent="";
+  const cfg = ls.get(LS_CFG);
+  $("unlockBtn").disabled=true;
+  try{
+    let token;
+    try{ token = await decryptStr(pw, cfg.tok); }catch(e){ throw new Error("Mot de passe incorrect."); }
+    let data = emptyData();
+    const cache = ls.get(LS_CACHE);
+    if(cache){ try{ data = JSON.parse(await decryptStr(pw, cache)); }catch(e){} }
+    S = {pw, token, cfg, data, sha:null};
+    $("lPw").value="";
+    startApp(); sync();
+  }catch(e){ err.textContent=e.message; }
+  finally{ $("unlockBtn").disabled=false; }
+}
+
+function lock(){
+  if(S.dirty && S.pw) sync();
+  setTimeout(()=>{ S = {pw:null, token:null, cfg:ls.get(LS_CFG), data:null}; keyCache.clear(); boot(); }, S.dirty?1500:0);
+}
+function forget(){
+  if(!confirm("Effacer la configuration de cet appareil ? Tes données sur GitHub restent intactes.")) return;
+  ls.del(LS_CFG); ls.del(LS_CACHE); keyCache.clear(); S={}; boot();
+}
+function boot(){
+  const cfg = ls.get(LS_CFG);
+  if(!cfg){ show("setupView"); return; }
+  $("lockWho").textContent = "Données : "+cfg.owner+"/"+cfg.repo;
+  show("lockView"); setTimeout(()=>$("lPw").focus(), 50);
+}
+
+/* verrouillage auto */
+let lastAct = Date.now();
+["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev, ()=>lastAct=Date.now(), {passive:true}));
+setInterval(()=>{ if(S.pw && Date.now()-lastAct > 10*60*1000) lock(); }, 30000);
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible" && S.pw){
+    if(Date.now()-lastAct > 10*60*1000) lock(); else sync();
+  }
+});
+
+/* ================= INTERFACE ================= */
+let tab="items";
+const norm = s => (s||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+const esc = s => (s||"").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate = t => t ? new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}) : "";
+function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
+
+function startApp(){ show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
+
+const TITLES = {items:"Rangement", places:"Lieux", infos:"Infos maison", settings:"Réglages"};
+function setTab(t){
+  tab=t;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===t));
+  for(const k of Object.keys(TITLES)) $("tab-"+k).classList.toggle("hidden", k!==t);
+  $("title").textContent = TITLES[t];
+  $("fab").classList.toggle("hidden", t==="settings");
+  $("q").parentElement.classList.toggle("hidden", t==="settings");
+  $("q").placeholder = t==="infos" ? "Rechercher une info (ex. poubelle)…" : "Rechercher un objet ou un lieu…";
+  render(); scrollTo(0,0);
+}
+
+function render(){
+  if(!S.data) return;
+  const q = $("q").value;
+  const items = live(S.data.items), infos = live(S.data.infos);
+  // datalists
+  const places = [...new Set(items.map(i=>i.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
+  $("placesDL").innerHTML = places.map(p=>`<option value="${esc(p)}">`).join("");
+  const cats = [...new Set(["Cuisine","Salle de bain","Courses","Entretien","Jardin","Voiture","Électricité","Contacts", ...infos.map(i=>i.category).filter(Boolean)])];
+  $("catsDL").innerHTML = cats.map(p=>`<option value="${esc(p)}">`).join("");
+
+  if(tab==="items"){
+    const list = items.filter(i=>matches(q, i.name, i.location, i.notes, i.tags))
+      .sort((a,b)=> q ? a.name.localeCompare(b.name,"fr") : (b.updatedAt||0)-(a.updatedAt||0));
+    $("itemsList").innerHTML = list.length ? list.map(i=>`
+      <div class="card item" data-id="${i.id}" data-kind="items">
+        <div class="main">
+          <div class="name">${esc(i.name)}</div>
+          <div class="where">📍 ${esc(i.location||"—")}</div>
+          ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
+          <div class="meta">Rangé le ${fmtDate(i.updatedAt)}</div>
+        </div>
+      </div>`).join("") : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier rangement ci-dessus."}</div>`;
+  }
+  if(tab==="places"){
+    const groups = {};
+    for(const i of items){ if(!matches(q, i.name, i.location, i.notes)) continue; (groups[i.location||"Sans lieu"] ||= []).push(i); }
+    const keys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,"fr"));
+    $("placesList").innerHTML = keys.length ? keys.map(k=>`
+      <div class="group"><h3>📍 ${esc(k)} · ${groups[k].length}</h3>
+      <div class="list" style="margin-top:0">${groups[k].sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(i=>`
+        <div class="card item" data-id="${i.id}" data-kind="items"><div class="main"><div class="name">${esc(i.name)}</div>
+        ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div></div>`).join("")}</div></div>`).join("")
+      : `<div class="empty">Aucun lieu pour l'instant.</div>`;
+  }
+  if(tab==="infos"){
+    const list = infos.filter(i=>matches(q, i.title, i.value, i.category, i.notes));
+    const groups = {};
+    for(const i of list) (groups[i.category||"Divers"] ||= []).push(i);
+    const keys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,"fr"));
+    $("infosList").innerHTML = keys.length ? keys.map(k=>`
+      <div class="group"><h3>${esc(k)}</h3>
+      <div class="list" style="margin-top:0">${groups[k].sort((a,b)=>a.title.localeCompare(b.title,"fr")).map(i=>`
+        <div class="card item" data-id="${i.id}" data-kind="infos"><div class="main">
+          <div class="name">${esc(i.title)}</div>
+          <div class="where">${esc(i.value)}</div>
+          ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
+        </div></div>`).join("")}</div></div>`).join("")
+      : `<div class="empty">${q?"Aucune info trouvée.":"Aucune info pour l'instant.<br>Ex : « Poubelle cuisine » → « Sacs de 20 L »."}</div>`;
+  }
+  if(tab==="settings"){
+    $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${items.length} objet(s), ${infos.length} info(s)` + (S.lastSync?` · dernière synchro ${S.lastSync.toLocaleTimeString("fr-FR")}`:"");
+  }
+}
+
+/* ---- saisie rapide « objet dans lieu » ---- */
+function parseQuick(s){
+  s = s.trim().replace(/[.!]+$/,"");
+  s = s.replace(/^(j['’]\s*ai|je\s+(?:mets|range|place|pose))\s+(rang[ée]e?s?|plac[ée]e?s?|mis(?:es?)?|pos[ée]e?s?|stock[ée]e?s?)?\s*/i, "");
+  const m = s.match(/^(.+?)\s+(dans|sur|sous|derri[eè]re|devant|au|aux|[àa]\s+la|[àa]\s+l['’]|en|chez|[àa])\s+(.+)$/i);
+  if(!m) return null;
+  const strip = x => x.trim().replace(/^(?:(?:les|la|le|un|une|des|du|de\s+la|mon|ma|mes)\s+|l['’]\s*)/i, "").trim();
+  const name = strip(m[1]); let loc = m[3].trim();
+  const prep = m[2].toLowerCase();
+  const keepPrep = /^(sur|sous|derri[eè]re|devant)$/.test(prep);
+  if(!keepPrep) loc = strip(loc);
+  if(!name || !loc) return null;
+  const cap = x => x.charAt(0).toUpperCase()+x.slice(1);
+  const locLabel = (keepPrep ? prep+" " : "") + loc;
+  return {name:cap(name), location:cap(locLabel.trim())};
+}
+function quickAdd(){
+  const v = $("quickIn").value; if(!v.trim()) return;
+  const p = parseQuick(v);
+  if(!p){ openItem({name:v.trim()}); return; }
+  const existing = live(S.data.items).find(i=>norm(i.name)===norm(p.name));
+  if(existing){
+    if(norm(existing.location)!==norm(p.location)){
+      existing.location=p.location; existing.updatedAt=Date.now(); touch();
+      toast(`${existing.name} déplacé : ${p.location}`);
+    } else toast(`${existing.name} est déjà noté à : ${p.location}`);
+  } else {
+    S.data.items.push({id:uid(), name:p.name, location:p.location, notes:"", updatedAt:Date.now()}); touch();
+    toast(`✓ ${p.name} → ${p.location}`);
+  }
+  $("quickIn").value=""; render();
+}
+
+/* ---- fenêtres d'édition ---- */
+function modal(html, onReady){
+  const root=$("modalRoot");
+  root.innerHTML = `<div class="backdrop"><div class="sheet">${html}</div></div>`;
+  const bd = root.firstElementChild;
+  bd.addEventListener("click", e=>{ if(e.target===bd) close(); });
+  function close(){ root.innerHTML=""; }
+  onReady(bd, close);
+}
+function openItem(existing){
+  const it = existing && existing.id ? existing : null;
+  modal(`<h2>${it?"Modifier l'objet":"Nouvel objet rangé"}</h2>
+    <label>Objet</label><input class="field" id="fName" value="${esc(existing?.name||"")}" placeholder="ex. Tente">
+    <label>Où est-il rangé ?</label><input class="field" id="fLoc" list="placesDL" value="${esc(existing?.location||"")}" placeholder="ex. Armoire de la terrasse">
+    <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
+    <div class="actions">${it?`<button class="btn danger" id="fDel">Supprimer</button>`:""}<span class="spacer"></span>
+      <button class="btn ghost" id="fCancel">Annuler</button><button class="btn" id="fSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    setTimeout(()=>bd.querySelector(it||!existing?.name?"#fName":"#fLoc").focus(), 60);
+    bd.querySelector("#fCancel").onclick=close;
+    bd.querySelector("#fSave").onclick=()=>{
+      const name=bd.querySelector("#fName").value.trim(), location=bd.querySelector("#fLoc").value.trim(), notes=bd.querySelector("#fNotes").value.trim();
+      if(!name) return bd.querySelector("#fName").focus();
+      if(it) Object.assign(it,{name,location,notes,updatedAt:Date.now()});
+      else S.data.items.push({id:uid(),name,location,notes,updatedAt:Date.now()});
+      touch(); close(); $("quickIn").value=""; render();
+    };
+    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
+  });
+}
+function openInfo(it){
+  modal(`<h2>${it?"Modifier l'info":"Nouvelle info maison"}</h2>
+    <label>Sujet</label><input class="field" id="iTitle" value="${esc(it?.title||"")}" placeholder="ex. Poubelle cuisine">
+    <label>Information à retenir</label><input class="field" id="iVal" value="${esc(it?.value||"")}" placeholder="ex. Sacs poubelle de 20 L">
+    <label>Catégorie</label><input class="field" id="iCat" list="catsDL" value="${esc(it?.category||"")}" placeholder="ex. Courses">
+    <label>Détails (facultatif)</label><textarea class="field" id="iNotes" placeholder="ex. marque, référence, où l'acheter…">${esc(it?.notes||"")}</textarea>
+    <div class="actions">${it?`<button class="btn danger" id="iDel">Supprimer</button>`:""}<span class="spacer"></span>
+      <button class="btn ghost" id="iCancel">Annuler</button><button class="btn" id="iSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    setTimeout(()=>bd.querySelector("#iTitle").focus(), 60);
+    bd.querySelector("#iCancel").onclick=close;
+    bd.querySelector("#iSave").onclick=()=>{
+      const title=bd.querySelector("#iTitle").value.trim(), value=bd.querySelector("#iVal").value.trim(),
+            category=bd.querySelector("#iCat").value.trim(), notes=bd.querySelector("#iNotes").value.trim();
+      if(!title) return bd.querySelector("#iTitle").focus();
+      if(it) Object.assign(it,{title,value,category,notes,updatedAt:Date.now()});
+      else S.data.infos.push({id:uid(),title,value,category,notes,updatedAt:Date.now()});
+      touch(); close(); render();
+    };
+    if(it) bd.querySelector("#iDel").onclick=()=>{ if(confirm(`Supprimer « ${it.title} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
+  });
+}
+function changePassword(){
+  modal(`<h2>Changer le mot de passe</h2>
+    <div class="hint">Tes autres appareils devront ensuite être reconnectés avec le nouveau mot de passe (« Oublier cet appareil » puis reconnexion).</div>
+    <label>Mot de passe actuel</label><input class="field" id="cOld" type="password">
+    <label>Nouveau mot de passe</label><input class="field" id="cNew" type="password" autocomplete="new-password">
+    <label>Confirmer</label><input class="field" id="cNew2" type="password" autocomplete="new-password">
+    <div class="err" id="cErr"></div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="cCancel">Annuler</button><button class="btn" id="cOk">Changer</button></div>`,
+  (bd, close)=>{
+    bd.querySelector("#cCancel").onclick=close;
+    bd.querySelector("#cOk").onclick=async()=>{
+      const o=bd.querySelector("#cOld").value, n=bd.querySelector("#cNew").value, n2=bd.querySelector("#cNew2").value, err=bd.querySelector("#cErr");
+      if(o!==S.pw) return err.textContent="Mot de passe actuel incorrect.";
+      if(n.length<8) return err.textContent="8 caractères minimum.";
+      if(n!==n2) return err.textContent="Les mots de passe ne correspondent pas.";
+      bd.querySelector("#cOk").disabled=true;
+      try{
+        await sync();
+        const remote = await ghGet(S.cfg, S.token);
+        const salt = b64(rnd(16));
+        const blob = await encryptStr(n, JSON.stringify(S.data), salt);
+        S.sha = await ghPut(S.cfg, S.token, blob, remote?.sha);
+        S.cfg.salt = salt; S.cfg.tok = await encryptStr(n, S.token, salt);
+        S.pw = n; keyCache.clear(); ls.set(LS_CFG, S.cfg); await cacheLocal();
+        close(); toast("Mot de passe changé ✓");
+      }catch(e){ err.textContent=e.message; bd.querySelector("#cOk").disabled=false; }
+    };
+  });
+}
+function exportData(){
+  const blob = new Blob([JSON.stringify(S.data,null,2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download = "ma-maison-sauvegarde-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function importData(file){
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.items) || !Array.isArray(d.infos)) throw 0;
+      S.data = merge(S.data, d); touch(); render(); toast("Import fusionné ✓");
+    }catch(e){ toast("Fichier non reconnu."); }
+  };
+  r.readAsText(file);
+}
+
+/* ---- liaisons ---- */
+$("setupBtn").onclick=doSetup;
+$("sPw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doSetup(); });
+$("unlockBtn").onclick=doUnlock;
+$("lPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doUnlock(); });
+$("forgetBtn").onclick=forget; $("forgetBtn2").onclick=forget;
+$("lockNow").onclick=lock;
+$("q").addEventListener("input", render);
+$("quickBtn").onclick=quickAdd;
+$("quickIn").addEventListener("keydown", e=>{ if(e.key==="Enter") quickAdd(); });
+$("fab").onclick=()=> tab==="infos" ? openInfo() : openItem();
+$("syncNow").onclick=sync;
+$("chgPw").onclick=changePassword;
+$("exportBtn").onclick=exportData;
+$("importBtn").onclick=()=>$("importFile").click();
+$("importFile").onchange=e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=""; };
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ $("q").value=""; setTab(b.dataset.tab); });
+document.addEventListener("click", e=>{
+  const c = e.target.closest(".item[data-id]"); if(!c) return;
+  const arr = S.data[c.dataset.kind], it = arr.find(x=>x.id===c.dataset.id);
+  c.dataset.kind==="items" ? openItem(it) : openInfo(it);
+});
+addEventListener("online", ()=>{ if(S.pw) sync(); });
+
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+boot();
+</script>
+</body>
+</html>
