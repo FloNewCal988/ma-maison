@@ -177,6 +177,11 @@ nav.tabs button{position:relative}
 .qrbox img{width:100%;height:auto;display:block}
 video.scan{width:100%;border-radius:14px;background:#000;aspect-ratio:3/4;object-fit:cover;display:block}
 .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.dfield{display:flex;gap:6px;align-items:center}
+.dfield .field{flex:1;min-width:0}
+.clr{flex:none;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:15px;cursor:pointer}
+.chkline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--text);margin:14px 0 4px;cursor:pointer}
+.chkline input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 details.more{border:1px solid var(--line);border-radius:12px;padding:2px 12px 12px;margin-top:14px}
 details.more summary{padding:10px 0 4px;font-weight:600}
 </style>
@@ -913,7 +918,8 @@ function openDetail(it){
       <div class="k">Pièce</div><div>${esc(room||"—")}</div>
       <div class="k">Catégorie</div><div>${it.category?esc(catIcon(it.category)+" "+it.category):"—"}</div>
       ${it.notes?`<div class="k">Précisions</div><div>${esc(it.notes)}</div>`:""}
-      ${it.loan?`<div class="k">Prêté à</div><div><strong>${esc(it.loan.to)}</strong> <span class="meta">depuis le ${fmtDate(it.loan.date)}</span><br><button class="btn ghost small" id="dReturn" style="margin-top:6px">✓ Il me l'a rendu</button></div>`:""}
+      ${it.loan?`<div class="k">Prêté à</div><div><strong>${esc(it.loan.to)}</strong> <span class="meta">depuis le ${fmtDate(it.loan.date)}</span>${it.loan.returnBy?`<br>Retour prévu ${daysUntil(it.loan.returnBy)<0?`<span style="color:var(--danger);font-weight:600">le ${fmtDate(it.loan.returnBy)} (en retard)</span>`:"le "+fmtDate(it.loan.returnBy)}`:""}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn ghost small" id="dReturn">✓ Il me l'a rendu</button>${it.loan.returnBy?`<button class="btn ghost small" data-ics="ret">🔔 M'avertir</button>`:""}</div></div>`:""}
       ${it.purchaseDate?`<div class="k">Acheté le</div><div>${fmtDate(it.purchaseDate)}</div>`:""}
       ${it.warrantyEnd?`<div class="k">Garantie</div><div>${daysUntil(it.warrantyEnd)<0?"Expirée le ":"Jusqu'au "}${fmtDate(it.warrantyEnd)}${daysUntil(it.warrantyEnd)>=0?`<br><button class="btn ghost small" data-ics="war" style="margin-top:6px">🔔 M'avertir avant la fin</button>`:""}</div>`:""}
       ${it.expiry?`<div class="k">Péremption</div><div>${daysUntil(it.expiry)<0?"Périmé depuis le ":"Le "}${fmtDate(it.expiry)}${daysUntil(it.expiry)>=0?`<br><button class="btn ghost small" data-ics="exp" style="margin-top:6px">🔔 M'avertir</button>`:""}</div>`:""}
@@ -931,13 +937,24 @@ function openDetail(it){
     const inv=bd.querySelector("#dInv"); if(inv) inv.onclick=()=>openImage(it.invoice.id, "Facture · "+it.name);
     const ret=bd.querySelector("#dReturn"); if(ret) ret.onclick=()=>{ it.loan=null; it.updatedAt=Date.now(); touch(); close(); render(); toast(`✓ ${it.name} est de retour`); };
     bd.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>{
-      if(b.dataset.ics==="war") downloadIcs({title:`Fin de garantie : ${it.name}`, start:it.warrantyEnd, alarm:"-P13DT15H", desc:`La garantie de « ${it.name} » (${it.location||"—"}) se termine le ${fmtDate(it.warrantyEnd)}.`});
-      else downloadIcs({title:`Péremption : ${it.name}`, start:it.expiry, alarm:"-P6DT15H", desc:`« ${it.name} » (${it.location||"—"}) se périme le ${fmtDate(it.expiry)}.`});
+      const sum = itemSummary(it);
+      if(b.dataset.ics==="war") downloadIcs({title:`Fin de garantie : ${it.name}`, start:it.warrantyEnd, alarm:"-P13DT15H", desc:`La garantie se termine le ${fmtDate(it.warrantyEnd)}.
+
+${sum}`});
+      else if(b.dataset.ics==="ret") downloadIcs({title:`Retour de prêt : ${it.name} (${it.loan.to})`, start:it.loan.returnBy, alarm:"-PT15H", desc:`${it.loan.to} doit te rendre « ${it.name} » le ${fmtDate(it.loan.returnBy)}.
+
+${sum}`});
+      else downloadIcs({title:`Péremption : ${it.name}`, start:it.expiry, alarm:"-P6DT15H", desc:`Se périme le ${fmtDate(it.expiry)}.
+
+${sum}`});
     });
   });
 }
 
 /* formulaire objet */
+function dfield(id, value, type, ph){
+  return `<div class="dfield"><input class="field" id="${id}" type="${type||"date"}" value="${esc(value||"")}"${ph?` placeholder="${esc(ph)}"`:""}><button class="clr" data-clr="${id}" title="Effacer" aria-label="Effacer">✕</button></div>`;
+}
 function openItem(existing){
   const it = existing && existing.id ? existing : null;
   const noPlaces = !live(S.data.places).length && !live(S.data.items).some(i=>i.location);
@@ -962,10 +979,14 @@ function openItem(existing){
     <div id="fCatBox" class="newbox hidden"><label>Nom de la nouvelle catégorie</label><input class="field" id="fCatName" placeholder="ex. Matériel de plongée"></div>
     <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
     <details class="more"${hasMore?" open":""}><summary>Prêt, garantie, péremption</summary>
-      <label>Prêté à (laisser vide si chez toi)</label>
-      <div class="row2"><input class="field" id="fLoanTo" value="${esc(existing?.loan?.to||"")}" placeholder="ex. Julien"><input class="field" id="fLoanDate" type="date" value="${existing?.loan?isoDay(existing.loan.date):""}"></div>
-      <div class="row2"><div><label>Date d'achat</label><input class="field" id="fBuy" type="date" value="${existing?.purchaseDate?isoDay(existing.purchaseDate):""}"></div>
-      <div><label>Fin de garantie</label><input class="field" id="fWar" type="date" value="${existing?.warrantyEnd?isoDay(existing.warrantyEnd):""}"></div></div>
+      <label>Prêté à (laisser vide si chez toi)</label>${dfield("fLoanTo", existing?.loan?.to||"", "text", "ex. Julien")}
+      <div id="fLoanBox" class="${existing?.loan?"":"hidden"}">
+        <label>Date du prêt</label>${dfield("fLoanDate", existing?.loan?isoDay(existing.loan.date):"")}
+        <label class="chkline"><input type="checkbox" id="fRetOn"${existing?.loan?.returnBy?" checked":""}> Date de retour prévue</label>
+        <div id="fRetBox" class="${existing?.loan?.returnBy?"":"hidden"}">${dfield("fRetDate", existing?.loan?.returnBy?isoDay(existing.loan.returnBy):"")}</div>
+      </div>
+      <label>Date d'achat</label>${dfield("fBuy", existing?.purchaseDate?isoDay(existing.purchaseDate):"")}
+      <label>Fin de garantie</label>${dfield("fWar", existing?.warrantyEnd?isoDay(existing.warrantyEnd):"")}
       <div class="sugg"><button class="chip" data-war="1">Garantie 1 an</button><button class="chip" data-war="2">2 ans</button><button class="chip" data-war="5">5 ans</button></div>
       <label>Photo de la facture</label>
       <div class="photo-edit">
@@ -974,7 +995,7 @@ function openItem(existing){
         <button class="btn danger small${existing?.invoice?"":" hidden"}" id="fInvDel">Retirer</button></div>
         <input type="file" id="fInvFile" accept="image/*" class="hidden">
       </div>
-      <label>Date de péremption</label><input class="field" id="fExp" type="date" value="${existing?.expiry?isoDay(existing.expiry):""}">
+      <label>Date de péremption</label>${dfield("fExp", existing?.expiry?isoDay(existing.expiry):"")}
     </details>
     <div class="actions">${it?`<button class="btn danger" id="fDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="fCancel">Annuler</button><button class="btn" id="fSave">Enregistrer</button></div>`,
@@ -1005,8 +1026,28 @@ function openItem(existing){
     bd.querySelectorAll("[data-war]").forEach(b=>b.onclick=()=>{
       const buy=bd.querySelector("#fBuy"); if(!buy.value) buy.value=isoDay(Date.now());
       const d=new Date(dayTs(buy.value)); d.setFullYear(d.getFullYear()+(+b.dataset.war)); bd.querySelector("#fWar").value=isoDay(d.getTime());
+      buy.dispatchEvent(new Event("change")); bd.querySelector("#fWar").dispatchEvent(new Event("change"));
     });
-    bd.querySelector("#fLoanTo").addEventListener("input", e=>{ const ld=bd.querySelector("#fLoanDate"); if(e.target.value.trim() && !ld.value) ld.value=isoDay(Date.now()); });
+    const loanBox=bd.querySelector("#fLoanBox"), retOn=bd.querySelector("#fRetOn"), retBox=bd.querySelector("#fRetBox");
+    const setVal=(id,v)=>{ const x=bd.querySelector("#"+id); x.value=v; x.dispatchEvent(new Event("change")); };
+    bd.querySelector("#fLoanTo").addEventListener("input", e=>{
+      const on=!!e.target.value.trim(); loanBox.classList.toggle("hidden", !on);
+      if(on && !bd.querySelector("#fLoanDate").value) setVal("fLoanDate", isoDay(Date.now()));
+    });
+    retOn.onchange=()=>{
+      retBox.classList.toggle("hidden", !retOn.checked);
+      if(retOn.checked && !bd.querySelector("#fRetDate").value){ const base=bd.querySelector("#fLoanDate").value?dayTs(bd.querySelector("#fLoanDate").value):Date.now(); setVal("fRetDate", isoDay(base+14*86400000)); }
+      if(!retOn.checked) setVal("fRetDate","");
+    };
+    bd.querySelectorAll("[data-clr]").forEach(b=>{
+      const inp=bd.querySelector("#"+b.dataset.clr), upd=()=>b.classList.toggle("hidden", !inp.value);
+      inp.addEventListener("input", upd); inp.addEventListener("change", upd); upd();
+      b.onclick=()=>{
+        inp.value=""; upd();
+        if(b.dataset.clr==="fLoanTo"){ setVal("fLoanDate",""); setVal("fRetDate",""); retOn.checked=false; retBox.classList.add("hidden"); loanBox.classList.add("hidden"); }
+        if(b.dataset.clr==="fRetDate"){ retOn.checked=false; retBox.classList.add("hidden"); }
+      };
+    });
     bd.querySelector("#fPhDel").onclick=()=>{ newPhoto=null; removePhoto=!!it?.photo; ph.innerHTML=""; bd.querySelector("#fPhDel").classList.add("hidden"); bd.querySelector("#fPhBtn").textContent="Ajouter une photo"; };
     setTimeout(()=>{ const f = !existing?.name ? "#fName" : existing?.newLocName ? "#fNewName" : null; if(f) bd.querySelector(f).focus(); }, 60);
     bd.querySelector("#fCancel").onclick=close;
@@ -1047,7 +1088,7 @@ function openItem(existing){
       } else if(removeInv && invoice){ deletePhoto(invoice.id); invoice=null; }
       const dv = id => { const v=bd.querySelector(id).value; return v ? dayTs(v) : null; };
       const loanTo = cap(bd.querySelector("#fLoanTo").value.trim());
-      const loan = loanTo ? {to:loanTo, date: dv("#fLoanDate") || target?.loan?.date || Date.now()} : null;
+      const loan = loanTo ? {to:loanTo, date: dv("#fLoanDate") || target?.loan?.date || Date.now(), returnBy: bd.querySelector("#fRetOn").checked ? dv("#fRetDate") : null} : null;
       const fields = {name, location, category, notes, photo, invoice, loan, purchaseDate:dv("#fBuy"), warrantyEnd:dv("#fWar"), expiry:dv("#fExp"), updatedAt:Date.now()};
       if(target) Object.assign(target, fields); else S.data.items.push({id:uid(), ...fields});
       touch(); close(); $("quickIn").value=""; render();
@@ -1352,7 +1393,10 @@ function getAlerts(){
   for(const i of live(S.data.items)){
     if(i.expiry){ const d=daysUntil(i.expiry); if(d<=30) out.push({kind:"item", id:i.id, lv:d<0?"late":"soon", icon:"⏳", text:i.name, sub:d<0?`Périmé depuis le ${fmtDate(i.expiry)}`:`Se périme ${d===0?"aujourd'hui":"le "+fmtDate(i.expiry)}`}); }
     if(i.warrantyEnd){ const d=daysUntil(i.warrantyEnd); if(d<=30 && d>=-7) out.push({kind:"item", id:i.id, lv:d<0?"late":"soon", icon:"🧾", text:`Garantie : ${i.name}`, sub:d<0?`Expirée le ${fmtDate(i.warrantyEnd)}`:`Expire le ${fmtDate(i.warrantyEnd)}`}); }
-    if(i.loan){ const d=-daysUntil(i.loan.date); if(d>=30) out.push({kind:"item", id:i.id, lv:"soon", icon:"🤝", text:`${i.name} prêté à ${i.loan.to}`, sub:`Depuis ${d} jours`}); }
+    if(i.loan){
+      if(i.loan.returnBy){ const d=daysUntil(i.loan.returnBy); if(d<=3) out.push({kind:"item", id:i.id, lv:level(d), icon:"🤝", text:`Retour : ${i.name} (${i.loan.to})`, sub:d<0?`Retour en retard de ${-d} j`:`Retour prévu ${d===0?"aujourd'hui":d===1?"demain":"le "+fmtDate(i.loan.returnBy)}`}); }
+      else { const d=-daysUntil(i.loan.date); if(d>=30) out.push({kind:"item", id:i.id, lv:"soon", icon:"🤝", text:`${i.name} prêté à ${i.loan.to}`, sub:`Depuis ${d} jours`}); }
+    }
   }
   const n = live(S.data.shopping).filter(x=>!x.done).length;
   if(n) out.push({kind:"shop", id:"", lv:"ok", icon:"🛒", text:`${n} article${n>1?"s":""} à acheter`, sub:"Voir la liste de courses"});
@@ -1365,20 +1409,34 @@ function alertsHTML(al){
 }
 function statusPills(i){
   let h="";
-  if(i.loan) h+=`<span class="pill loan">🤝 Prêté à ${esc(i.loan.to)}</span>`;
+  if(i.loan){ h+=`<span class="pill loan">🤝 Prêté à ${esc(i.loan.to)}</span>`; if(i.loan.returnBy && daysUntil(i.loan.returnBy)<0) h+=`<span class="pill bad">Retour en retard</span>`; }
   if(i.expiry){ const d=daysUntil(i.expiry); if(d<0) h+=`<span class="pill bad">Périmé</span>`; else if(d<=30) h+=`<span class="pill warn">Périme ${d===0?"aujourd'hui":"le "+fmtDate(i.expiry)}</span>`; }
   if(i.warrantyEnd){ const d=daysUntil(i.warrantyEnd); if(d>=0 && d<=30) h+=`<span class="pill warn">Garantie expire bientôt</span>`; else if(d>30) h+=`<span class="pill">Sous garantie</span>`; }
   return h;
 }
+function itemSummary(it){
+  const L=[`Objet : ${it.name}`];
+  if(it.location) L.push(`Rangement : ${it.location}`);
+  const r=roomOfPlace(it.location); if(r) L.push(`Pièce : ${r}`);
+  if(it.category) L.push(`Catégorie : ${it.category}`);
+  if(it.notes) L.push(`Précisions : ${it.notes}`);
+  if(it.loan){ L.push(`Prêté à : ${it.loan.to} (depuis le ${fmtDate(it.loan.date)})`); if(it.loan.returnBy) L.push(`Retour prévu : ${fmtDate(it.loan.returnBy)}`); }
+  if(it.purchaseDate) L.push(`Acheté le : ${fmtDate(it.purchaseDate)}`);
+  if(it.warrantyEnd) L.push(`Fin de garantie : ${fmtDate(it.warrantyEnd)}`);
+  if(it.expiry) L.push(`Péremption : ${fmtDate(it.expiry)}`);
+  if(it.invoice) L.push(`Facture : photo enregistrée dans Ma Maison`);
+  return L.join("\n");
+}
+function icsFold(line){ const out=[]; let cur=""; for(const ch of line){ if(new TextEncoder().encode(cur+ch).length>73){ out.push(cur); cur=" "+ch; } else cur+=ch; } out.push(cur); return out.join("\r\n"); }
 function icsEsc(x){ return (x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
 function downloadIcs({title, start, desc, rrule, alarm}){
   const ymd = x => `${x.getFullYear()}${String(x.getMonth()+1).padStart(2,"0")}${String(x.getDate()).padStart(2,"0")}`;
   const d=new Date(start), e=new Date(start); e.setDate(e.getDate()+1);
   const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
-  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ma Maison//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH","BEGIN:VEVENT",`UID:${uid()}@ma-maison`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${ymd(d)}`,`DTEND;VALUE=DATE:${ymd(e)}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc||"Rappel Ma Maison")}`];
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ma Maison//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH","BEGIN:VEVENT",`UID:${uid()}@ma-maison`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${ymd(d)}`,`DTEND;VALUE=DATE:${ymd(e)}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc||"Rappel Ma Maison")}`,`URL:${location.origin+location.pathname}`];
   if(rrule) L.push("RRULE:"+rrule);
   L.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsEsc(title)}`,`TRIGGER:${alarm||"-PT15H"}`,"END:VALARM","END:VEVENT","END:VCALENDAR");
-  const blob = new Blob([L.join("\r\n")+"\r\n"], {type:"text/calendar"});
+  const blob = new Blob([L.map(icsFold).join("\r\n")+"\r\n"], {type:"text/calendar"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="rappel-ma-maison.ics";
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
   toast("Ouvre le fichier pour l'ajouter à ton Calendrier");
