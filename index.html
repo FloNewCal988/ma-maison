@@ -205,6 +205,7 @@ details.more summary{padding:10px 0 4px;font-weight:600}
     <label>Confirmer le mot de passe</label>
     <input class="field" id="sPw2" type="password" autocomplete="new-password">
     <div id="setupErr" class="err"></div>
+    <label class="chkline"><input type="checkbox" id="sRemember" checked> Rester connecté sur cet appareil</label>
     <div class="actions"><button class="btn block" id="setupBtn">Connecter</button></div>
   </div>
 </section>
@@ -216,6 +217,7 @@ details.more summary{padding:10px 0 4px;font-weight:600}
     <label>Mot de passe</label>
     <input class="field" id="lPw" type="password" autocomplete="current-password">
     <div id="lockErr" class="err"></div>
+    <label class="chkline"><input type="checkbox" id="lRemember" checked> Rester connecté sur cet appareil</label>
     <div class="actions"><button class="btn block" id="unlockBtn">Déverrouiller</button></div>
     <details><summary>Réinitialiser cet appareil</summary>
       <div class="hint">Efface la configuration locale de cet appareil (les données sur GitHub ne sont pas touchées).</div>
@@ -307,6 +309,8 @@ details.more summary{padding:10px 0 4px;font-weight:600}
         <div class="card setrow">
           <strong>Sécurité</strong>
           <div class="hint">Verrouillage automatique après 10 min d'inactivité. Données et photos chiffrées (AES-256) avant l'envoi sur GitHub.</div>
+          <label class="chkline" style="margin-top:4px"><input type="checkbox" id="remToggle"> Rester connecté sur cet appareil</label>
+          <div class="hint" style="margin-top:0">Plus besoin du mot de passe à l'ouverture sur ce téléphone. Le bouton 🔒 en haut déconnecte l'appareil et redemandera le mot de passe.</div>
           <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
         </div>
         <div class="card setrow">
@@ -370,7 +374,7 @@ const encryptStr = (pw, str, salt) => encryptBytes(pw, te.encode(str), salt);
 const decryptStr = async (pw, blob) => td.decode(await decryptBytes(pw, blob));
 
 /* ================= STOCKAGE LOCAL ================= */
-const LS_CFG="mm_cfg", LS_CACHE="mm_cache";
+const LS_CFG="mm_cfg", LS_CACHE="mm_cache", LS_REM="mm_rem";
 const ls = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
@@ -513,18 +517,40 @@ async function doSetup(){
     }
     cfg.tok = await encryptStr(pw, token, cfg.salt);
     ls.set(LS_CFG, cfg);
+    if($("sRemember").checked) await rememberDevice(pw); else forgetDevice();
     S = {pw, token, cfg, data};
     startApp(); sync();
   }catch(e){ err.textContent = /fetch|network/i.test(e.message) ? "Connexion à GitHub impossible." : e.message; }
   finally{ $("setupBtn").disabled=false; $("setupBtn").textContent="Connecter"; }
 }
-async function doUnlock(){
-  const pw=$("lPw").value, err=$("lockErr"); err.textContent="";
+/* Appareil de confiance : une clé propre à ce téléphone (non exportable, rangée dans le navigateur)
+   chiffre le mot de passe ; le lien seul ne donne donc accès à rien. */
+async function deviceKey(create){
+  let k = await idb.get("__devkey");
+  if(!k && create){ k = await crypto.subtle.generateKey({name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]); await idb.set("__devkey", k); }
+  return k || null;
+}
+async function rememberDevice(pw){
+  try{ const k=await deviceKey(true); if(!k) return; const iv=rnd(12);
+    const ct=await crypto.subtle.encrypt({name:"AES-GCM", iv}, k, te.encode(pw));
+    ls.set(LS_REM, {iv:b64(iv), ct:b64(ct)}); }catch(e){}
+}
+function forgetDevice(){ ls.del(LS_REM); }
+const isRemembered = () => !!ls.get(LS_REM);
+async function rememberedPassword(){
+  const r=ls.get(LS_REM); if(!r) return null;
+  try{ const k=await deviceKey(false); if(!k) return null;
+    return td.decode(await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(r.iv)}, k, unb64(r.ct))); }catch(e){ return null; }
+}
+async function doUnlock(pwArg){
+  const auto = typeof pwArg==="string";
+  const pw = auto ? pwArg : $("lPw").value, err=$("lockErr"); err.textContent="";
   const cfg = ls.get(LS_CFG);
   $("unlockBtn").disabled=true;
   try{
     let token;
-    try{ token = await decryptStr(pw, cfg.tok); }catch(e){ throw new Error("Mot de passe incorrect."); }
+    try{ token = await decryptStr(pw, cfg.tok); }catch(e){ if(auto){ forgetDevice(); throw new Error("Reconnecte-toi avec ton mot de passe."); } throw new Error("Mot de passe incorrect."); }
+    if(!auto){ if($("lRemember").checked) await rememberDevice(pw); else forgetDevice(); }
     let data = emptyData();
     const cache = ls.get(LS_CACHE);
     if(cache){ try{ data = JSON.parse(await decryptStr(pw, cache)); }catch(e){} }
@@ -534,26 +560,31 @@ async function doUnlock(){
   }catch(e){ err.textContent=e.message; }
   finally{ $("unlockBtn").disabled=false; }
 }
-function lock(){
+function lock(manual){
+  if(manual===true) forgetDevice();
   if(S.dirty && S.pw) sync();
   setTimeout(()=>{ S = {pw:null, token:null, cfg:ls.get(LS_CFG), data:null}; keyCache.clear(); photoURLs.forEach(u=>URL.revokeObjectURL(u)); photoURLs.clear(); $("modalRoot").innerHTML=""; boot(); }, S.dirty?1500:0);
 }
 function forget(){
   if(!confirm("Effacer la configuration de cet appareil ? Tes données sur GitHub restent intactes.")) return;
-  ls.del(LS_CFG); ls.del(LS_CACHE); idb.clear(); keyCache.clear(); S={}; $("modalRoot").innerHTML=""; boot();
+  ls.del(LS_CFG); ls.del(LS_CACHE); forgetDevice(); idb.clear(); keyCache.clear(); S={}; $("modalRoot").innerHTML=""; boot();
 }
 function boot(){
   const cfg = ls.get(LS_CFG);
   if(!cfg){ show("setupView"); return; }
   $("lockWho").textContent = "Données : "+cfg.owner+"/"+cfg.repo;
-  show("lockView"); setTimeout(()=>$("lPw").focus(), 50);
+  show("lockView");
+  if(isRemembered()){
+    $("lockErr").textContent=""; $("unlockBtn").textContent="Ouverture…";
+    rememberedPassword().then(pw=>{ $("unlockBtn").textContent="Déverrouiller"; if(pw) doUnlock(pw); else { forgetDevice(); $("lPw").focus(); } });
+  } else setTimeout(()=>$("lPw").focus(), 50);
 }
 let lastAct = Date.now();
 ["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev, ()=>lastAct=Date.now(), {passive:true}));
-setInterval(()=>{ if(S.pw && !busyLong && Date.now()-lastAct > 10*60*1000) lock(); }, 30000);
+setInterval(()=>{ if(S.pw && !busyLong && !isRemembered() && Date.now()-lastAct > 10*60*1000) lock(); }, 30000);
 let busyLong = false;
 document.addEventListener("visibilitychange", ()=>{
-  if(document.visibilityState==="visible" && S.pw){ if(!busyLong && Date.now()-lastAct > 10*60*1000) lock(); else sync(); }
+  if(document.visibilityState==="visible" && S.pw){ if(!busyLong && !isRemembered() && Date.now()-lastAct > 10*60*1000) lock(); else sync(); }
 });
 
 /* ================= OUTILS ================= */
@@ -837,6 +868,7 @@ function render(){
   }
 
   if(tab==="settings"){
+    $("remToggle").checked = isRemembered();
     $("roomsChips").innerHTML = live(S.data.rooms).sort(byName).map(r=>`<button class="chip" data-listedit="rooms:${esc(r.id)}">${esc(r.name)}</button>`).join("");
     $("catsChips").innerHTML = live(S.data.cats).sort(byName).map(c=>`<button class="chip" data-listedit="cats:${esc(c.id)}">${esc(c.icon||"📦")} ${esc(c.name)}</button>`).join("");
     $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${items.length} objet(s), ${live(S.data.places).length} rangement(s), ${live(S.data.products).length} article(s) acheté(s)` + (S.lastSync?` · synchro ${S.lastSync.toLocaleTimeString("fr-FR")}`:"");
@@ -922,7 +954,8 @@ function openDetail(it){
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn ghost small" id="dReturn">✓ Il me l'a rendu</button>${it.loan.returnBy?`<button class="btn ghost small" data-ics="ret">🔔 M'avertir</button>`:""}</div></div>`:""}
       ${it.purchaseDate?`<div class="k">Acheté le</div><div>${fmtDate(it.purchaseDate)}</div>`:""}
       ${it.warrantyEnd?`<div class="k">Garantie</div><div>${daysUntil(it.warrantyEnd)<0?"Expirée le ":"Jusqu'au "}${fmtDate(it.warrantyEnd)}${daysUntil(it.warrantyEnd)>=0?`<br><button class="btn ghost small" data-ics="war" style="margin-top:6px">🔔 M'avertir avant la fin</button>`:""}</div>`:""}
-      ${it.expiry?`<div class="k">Péremption</div><div>${daysUntil(it.expiry)<0?"Périmé depuis le ":"Le "}${fmtDate(it.expiry)}${daysUntil(it.expiry)>=0?`<br><button class="btn ghost small" data-ics="exp" style="margin-top:6px">🔔 M'avertir</button>`:""}</div>`:""}
+      ${it.expiry?`<div class="k">Péremption</div><div>${daysUntil(it.expiry)<0?"Périmé depuis le ":"Le "}${fmtDate(it.expiry)}${daysUntil(it.expiry)>=0?`<br><button class="btn ghost small" data-ics="exp" style="margin-top:6px">🔔 M'avertir</button>`:`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn ghost small" id="dRepl">🔄 Remplacé</button><button class="btn danger small" id="dTrash">🗑️ Jeté</button></div>`}</div>`:""}
+      ${it.restock?`<div class="k">Statut</div><div><span class="pill warn" style="margin:0">À racheter</span> <span class="meta">(jeté le ${fmtDate(it.restock)})</span><br><button class="btn ghost small" id="dRepl" style="margin-top:6px">🔄 Racheté / remplacé</button></div>`:""}
       ${it.invoice?`<div class="k">Facture</div><div><div class="ph" style="width:72px;height:72px;cursor:pointer" id="dInv" data-emoji="🧾"><img alt="" data-pid="${esc(it.invoice.id)}"></div></div>`:""}
       <div class="k">Mis à jour</div><div>${fmtDate(it.updatedAt)}</div>
     </div>
@@ -935,6 +968,8 @@ function openDetail(it){
     bd.querySelector("#dEdit").onclick=()=>openItem(it);
     bd.querySelectorAll("#dInv img").forEach(()=>hydratePhotos(bd.querySelector("#dInv")));
     const inv=bd.querySelector("#dInv"); if(inv) inv.onclick=()=>openImage(it.invoice.id, "Facture · "+it.name);
+    const repl=bd.querySelector("#dRepl"); if(repl) repl.onclick=()=>openReplace(it);
+    const trash=bd.querySelector("#dTrash"); if(trash) trash.onclick=()=>openTrash(it);
     const ret=bd.querySelector("#dReturn"); if(ret) ret.onclick=()=>{ it.loan=null; it.updatedAt=Date.now(); touch(); close(); render(); toast(`✓ ${it.name} est de retour`); };
     bd.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>{
       const sum = itemSummary(it);
@@ -1201,8 +1236,6 @@ function addPurchase(name, ts, qty, receiptId){
   else if(norm(name)!==norm(p.name) && !(p.aliases||[]).some(a=>norm(a)===norm(name))) (p.aliases ||= []).push(name);
   (p.history ||= []).push({date:ts, qty:qty||1, receiptId:receiptId||null});
   p.lastDate = Math.max(p.lastDate||0, ts); p.status="reste"; p.updatedAt=Date.now();
-  const names=[p.name, ...(p.aliases||[])];
-  for(const x of live(S.data.shopping)) if(!x.done && (norm(x.name)===norm(name) || closest(x.name, names, 9) || wordsIn(x.name, name))){ x.done=true; x.updatedAt=Date.now(); }
 }
 function openProduct(p){
   const hist = [...(p.history||[])].sort((a,b)=>b.date-a.date);
@@ -1243,8 +1276,10 @@ function openManualPurchase(){
     bd.querySelector("#mCancel").onclick=close;
     bd.querySelector("#mSave").onclick=()=>{
       const name=bd.querySelector("#mName").value.trim(); if(!name) return bd.querySelector("#mName").focus();
-      addPurchase(name, dayTs(bd.querySelector("#mDate").value||isoDay(Date.now())), +bd.querySelector("#mQty").value||1, null);
+      const ts = dayTs(bd.querySelector("#mDate").value||isoDay(Date.now()));
+      addPurchase(name, ts, +bd.querySelector("#mQty").value||1, null);
       touch(); close(); render(); toast("✓ Achat ajouté");
+      proposeMatches([name], ts);
     };
   });
 }
@@ -1374,6 +1409,7 @@ function openReceiptReview(parsed){
       S.data.receipts.push({id:rid, date:ts, store:bd.querySelector("#rvStore").value.trim(), lines, updatedAt:Date.now()});
       for(const l of lines) addPurchase(l.name, ts, l.qty, rid);
       touch(); close(); courseFilter="all"; render(); toast(`✓ ${lines.length} article(s) enregistrés`);
+      proposeMatches(lines.map(l=>l.name), ts);
     };
   });
 }
@@ -1410,6 +1446,7 @@ function alertsHTML(al){
 function statusPills(i){
   let h="";
   if(i.loan){ h+=`<span class="pill loan">🤝 Prêté à ${esc(i.loan.to)}</span>`; if(i.loan.returnBy && daysUntil(i.loan.returnBy)<0) h+=`<span class="pill bad">Retour en retard</span>`; }
+  if(i.restock) h+=`<span class="pill warn">À racheter</span>`;
   if(i.expiry){ const d=daysUntil(i.expiry); if(d<0) h+=`<span class="pill bad">Périmé</span>`; else if(d<=30) h+=`<span class="pill warn">Périme ${d===0?"aujourd'hui":"le "+fmtDate(i.expiry)}</span>`; }
   if(i.warrantyEnd){ const d=daysUntil(i.warrantyEnd); if(d>=0 && d<=30) h+=`<span class="pill warn">Garantie expire bientôt</span>`; else if(d>30) h+=`<span class="pill">Sous garantie</span>`; }
   return h;
@@ -1450,6 +1487,79 @@ function loadScript(src){
 function openImage(pid, title){
   modal(`${sheetHead("image","Photo", esc(title))}<div class="hero" data-emoji="🧾" style="aspect-ratio:3/4"><img alt="" data-pid="${esc(pid)}" data-kind="full"></div>
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="imClose">Fermer</button></div>`, (bd, close)=>{ hydratePhotos(bd); bd.querySelector("#imClose").onclick=close; });
+}
+
+/* ================= PÉRIMÉ : REMPLACÉ / JETÉ ================= */
+function openReplace(it){
+  modal(`${sheetHead("item","Remplacé", esc(it.name))}
+    <div class="hint" style="margin-top:0">Tu as un ${esc(it.name.toLowerCase())} neuf, rangé au même endroit (${esc(it.location||"—")}). La fiche est conservée, seule la date change.</div>
+    <label>Nouvelle date de péremption</label>${dfield("rpExp","")}
+    <div class="hint">Laisse vide si le nouveau produit n'a pas de date.</div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="rpCancel">Annuler</button><button class="btn" id="rpOk">Valider</button></div>`,
+  (bd, close)=>{
+    const inp=bd.querySelector("#rpExp"), clr=bd.querySelector('[data-clr="rpExp"]'), upd=()=>clr.classList.toggle("hidden", !inp.value);
+    inp.addEventListener("change", upd); inp.addEventListener("input", upd); clr.onclick=()=>{ inp.value=""; upd(); }; upd();
+    bd.querySelector("#rpCancel").onclick=close;
+    bd.querySelector("#rpOk").onclick=()=>{
+      const now=Date.now();
+      Object.assign(it, {expiry: inp.value?dayTs(inp.value):null, purchaseDate: dayTs(isoDay(now)), restock:null, updatedAt:now});
+      touch(); close(); render(); toast(`✓ ${it.name} remplacé`);
+    };
+  });
+}
+function openTrash(it){
+  modal(`${sheetHead("item","Jeté", esc(it.name))}
+    <label class="chkline"><input type="checkbox" id="trShop" checked> Ajouter à ma liste de courses</label>
+    <label>Et la fiche de l'objet ?</label>
+    <div class="seg" id="trSeg" style="margin-top:0"><button data-k="keep" class="on">Garder la fiche</button><button data-k="del">Supprimer la fiche</button></div>
+    <div class="hint" id="trHint">La fiche reste (rangement, photo…) marquée « À racheter ». Tu mettras la nouvelle date quand tu l'auras racheté.</div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="trCancel">Annuler</button><button class="btn" id="trOk">Valider</button></div>`,
+  (bd, close)=>{
+    let keep=true;
+    bd.querySelectorAll("#trSeg button").forEach(b=>b.onclick=()=>{ keep=b.dataset.k==="keep"; bd.querySelectorAll("#trSeg button").forEach(x=>x.classList.toggle("on", x===b));
+      bd.querySelector("#trHint").textContent = keep ? "La fiche reste (rangement, photo…) marquée « À racheter ». Tu mettras la nouvelle date quand tu l'auras racheté." : "La fiche et ses photos seront supprimées."; });
+    bd.querySelector("#trCancel").onclick=close;
+    bd.querySelector("#trOk").onclick=()=>{
+      const now=Date.now();
+      if(bd.querySelector("#trShop").checked) addToShop(it.name);
+      if(keep) Object.assign(it, {expiry:null, restock:now, updatedAt:now});
+      else { if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); Object.assign(it, {deleted:true, photo:null, invoice:null, updatedAt:now}); }
+      touch(); close(); render(); toast(keep ? `${it.name} : à racheter` : `${it.name} supprimé`);
+    };
+  });
+}
+
+/* ================= RAPPROCHEMENTS À VALIDER ================= */
+function looksSame(a, b){ return norm(a)===norm(b) || !!closest(a,[b],9) || wordsIn(a,b) || wordsIn(b,a); }
+function proposeMatches(bought, ts){
+  const shop=[], items=[];
+  for(const x of live(S.data.shopping)){ if(x.done) continue; const n=bought.find(b=>looksSame(x.name,b)); if(n) shop.push({x, n}); }
+  for(const i of live(S.data.items)){
+    if(!(i.restock || (i.expiry && daysUntil(i.expiry)<0))) continue;
+    const n=bought.find(b=>norm(i.name)===norm(b) || !!closest(i.name,[b],9) || wordsIn(i.name,b)); if(n) items.push({i, n}); // strict : tout le nom de l'objet doit être dans l'article acheté
+  }
+  if(!shop.length && !items.length) return;
+  modal(`${sheetHead("cart","Rapprochements","À valider")}
+    <div class="hint" style="margin-top:0">J'ai trouvé des correspondances avec ce que tu viens d'acheter. Décoche ce qui ne correspond pas.</div>
+    ${shop.length?`<label>Liste de courses</label><div class="card" style="padding:2px 12px">${shop.map((m,k)=>`
+      <label class="chkline" style="margin:8px 0"><input type="checkbox" data-ms="${k}" checked><span>🛒 <strong>${esc(m.x.name)}</strong> <span class="meta">↔ acheté : ${esc(m.n)}</span></span></label>`).join("")}</div>`:""}
+    ${items.length?`<label>Objets à racheter / périmés</label><div class="card" style="padding:4px 12px 10px">${items.map((m,k)=>`
+      <label class="chkline" style="margin:8px 0 4px"><input type="checkbox" data-mi="${k}" checked><span>🔄 <strong>${esc(m.i.name)}</strong> <span class="meta">↔ acheté : ${esc(m.n)}</span></span></label>
+      <div class="meta" style="margin:0 0 4px 32px">Nouvelle date de péremption (facultatif)</div>
+      <div style="margin-left:32px">${dfield("miExp"+k,"")}</div>`).join("")}</div>`:""}
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="maSkip">Ignorer</button><button class="btn" id="maOk">Valider</button></div>`,
+  (bd, close)=>{
+    bd.querySelectorAll("[data-clr]").forEach(b=>{ const inp=bd.querySelector("#"+b.dataset.clr), upd=()=>b.classList.toggle("hidden", !inp.value);
+      inp.addEventListener("change", upd); inp.addEventListener("input", upd); b.onclick=()=>{ inp.value=""; upd(); }; upd(); });
+    bd.querySelector("#maSkip").onclick=close;
+    bd.querySelector("#maOk").onclick=()=>{
+      const now=Date.now(); let n=0;
+      shop.forEach((m,k)=>{ if(bd.querySelector(`[data-ms="${k}"]`).checked){ m.x.done=true; m.x.updatedAt=now; n++; } });
+      items.forEach((m,k)=>{ if(bd.querySelector(`[data-mi="${k}"]`).checked){ const v=bd.querySelector("#miExp"+k).value;
+        Object.assign(m.i, {restock:null, expiry: v?dayTs(v):null, purchaseDate: ts||now, updatedAt:now}); n++; } });
+      touch(); close(); render(); if(n) toast(`✓ ${n} rapprochement${n>1?"s":""} validé${n>1?"s":""}`);
+    };
+  });
 }
 
 /* ================= LISTE DE COURSES ================= */
@@ -1602,37 +1712,76 @@ function openLabel(p){
 function openQrScan(){
   let stream=null, stopped=false;
   const stop=()=>{ stopped=true; if(stream) stream.getTracks().forEach(t=>t.stop()); };
+  // iOS : la caméra doit être demandée tout de suite, dans le geste de l'utilisateur
+  const gum = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    ? navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}}, audio:false})
+    : Promise.reject(new Error("Caméra non disponible ici."));
+  gum.catch(()=>{});
+  const lib = loadScript("https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js");
+  lib.catch(()=>{});
   modal(`${sheetHead("tag","Étiquette QR","Scanner une étiquette", true)}
-    <video class="scan" id="qv" playsinline muted autoplay></video>
+    <video class="scan" id="qv" playsinline webkit-playsinline muted autoplay></video>
     <div class="hint" id="qmsg">Vise le QR code collé sur le rangement.</div>
+    <button class="btn ghost block" id="qPhoto" style="margin-top:10px">📸 Prendre une photo de l'étiquette</button>
+    <input type="file" id="qFile" accept="image/*" capture="environment" class="hidden">
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="qClose">Fermer</button></div>`,
   async (bd, close)=>{
+    const msg = t => { const m=bd.querySelector("#qmsg"); if(m) m.textContent=t; };
+    const handle = data => {
+      const m = (data||"").match(/#place=([\w:-]+)/);
+      if(!m){ msg("Ce QR code n'est pas une étiquette Ma Maison."); return false; }
+      stop(); if(!openPlaceById(m[1])){ close(); toast("Rangement introuvable (supprimé ?)."); }
+      return true;
+    };
     bd.querySelector("#qClose").onclick=()=>{ stop(); close(); };
     bd.addEventListener("click", ev=>{ if(ev.target===bd) stop(); });
+    // Solution de secours : photo de l'étiquette
+    const qFile=bd.querySelector("#qFile");
+    bd.querySelector("#qPhoto").onclick=()=>qFile.click();
+    qFile.onchange=async()=>{
+      const f=qFile.files[0]; qFile.value=""; if(!f) return;
+      msg("Lecture de la photo…");
+      try{
+        await lib; const img=await loadImage(f);
+        for(const max of [1200, 800, 1800]){
+          const sc=Math.min(1, max/Math.max(img.naturalWidth, img.naturalHeight)), c=document.createElement("canvas");
+          c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc);
+          const g=c.getContext("2d"); g.drawImage(img,0,0,c.width,c.height);
+          const code=jsQR(g.getImageData(0,0,c.width,c.height).data, c.width, c.height, {inversionAttempts:"attemptBoth"});
+          if(code && code.data){ handle(code.data); return; }
+        }
+        msg("Aucun QR code trouvé sur la photo. Reprends-la plus près, bien nette et éclairée.");
+      }catch(e){ msg(e.message||"Lecture impossible."); }
+    };
+    // Caméra en direct
     try{
-      await loadScript("https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js");
-      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false});
+      stream = await gum;
       if(stopped){ stop(); return; }
-      const v=bd.querySelector("#qv"); v.srcObject=stream; await v.play();
+      const v=bd.querySelector("#qv");
+      v.muted=true; v.playsInline=true; v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline","");
+      v.srcObject=stream;
+      try{ await v.play(); }catch(e){}
+      setTimeout(()=>{ if(!stopped && document.body.contains(v) && !v.videoWidth) msg("L'image reste noire ? Utilise « Prendre une photo de l'étiquette » juste en dessous."); }, 3000);
+      await lib;
       const cv=document.createElement("canvas"), g=cv.getContext("2d", {willReadFrequently:true});
-      const tick=()=>{
+      let last=0;
+      const tick=(t)=>{
         if(stopped || !document.body.contains(v)){ stop(); return; }
-        if(v.readyState>=2 && v.videoWidth){
-          const s=Math.min(1, 720/Math.max(v.videoWidth, v.videoHeight)); cv.width=Math.round(v.videoWidth*s); cv.height=Math.round(v.videoHeight*s);
+        if(v.readyState>=2 && v.videoWidth && (!t || t-last>150)){
+          last=t||0;
+          const sc=Math.min(1, 720/Math.max(v.videoWidth, v.videoHeight)); cv.width=Math.round(v.videoWidth*sc); cv.height=Math.round(v.videoHeight*sc);
           g.drawImage(v,0,0,cv.width,cv.height);
           const code = jsQR(g.getImageData(0,0,cv.width,cv.height).data, cv.width, cv.height, {inversionAttempts:"dontInvert"});
-          if(code && code.data){
-            const m = code.data.match(/#place=([\w:-]+)/);
-            if(m){ stop(); if(!openPlaceById(m[1])){ close(); toast("Rangement introuvable (supprimé ?)."); } return; }
-            bd.querySelector("#qmsg").textContent="Ce QR code n'est pas une étiquette Ma Maison.";
-          }
+          if(code && code.data && handle(code.data)) return;
         }
         requestAnimationFrame(tick);
       };
-      tick();
+      requestAnimationFrame(tick);
     }catch(e){
       stop();
-      bd.querySelector("#qmsg").textContent = e && e.name==="NotAllowedError" ? "Accès à la caméra refusé. Autorise-le dans Réglages > Safari > Caméra, puis réessaie." : (e?.message || "Caméra indisponible.");
+      msg(e && e.name==="NotAllowedError"
+        ? "Accès à la caméra refusé. Tu peux utiliser « Prendre une photo de l'étiquette », ou autoriser la caméra dans Réglages > Safari > Caméra."
+        : (e?.message || "Caméra indisponible.") + " Utilise « Prendre une photo de l'étiquette ».");
     }
   });
 }
@@ -1672,7 +1821,7 @@ function changePassword(){
         const remote = await ghGetFile(S.cfg, S.token, DATA_PATH);
         await ghPutFile(S.cfg, S.token, DATA_PATH, JSON.stringify(await encryptStr(n, JSON.stringify(S.data), salt)), remote?.sha);
         S.cfg.salt = salt; S.cfg.tok = await encryptStr(n, S.token, salt);
-        S.pw = n; ls.set(LS_CFG, S.cfg); await cacheLocal();
+        S.pw = n; ls.set(LS_CFG, S.cfg); await cacheLocal(); if(isRemembered()) await rememberDevice(n);
         delete bd.dataset.busy; close(); toast("Mot de passe changé ✓");
       }catch(e){ err.textContent=e.message; bd.querySelector("#cOk").disabled=false; delete bd.dataset.busy; }
       finally{ busyLong=false; }
@@ -1701,7 +1850,8 @@ $("sPw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doSetup(); });
 $("unlockBtn").onclick=doUnlock;
 $("lPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doUnlock(); });
 $("forgetBtn").onclick=forget; $("forgetBtn2").onclick=forget;
-$("lockNow").onclick=lock;
+$("lockNow").onclick=()=>{ if(!isRemembered() || confirm("Te déconnecter de cet appareil ? Le mot de passe sera redemandé à la prochaine ouverture.")) lock(true); };
+$("remToggle").onchange=async e=>{ if(e.target.checked){ await rememberDevice(S.pw); toast("Cet appareil restera connecté"); } else { forgetDevice(); toast("Le mot de passe sera demandé à chaque ouverture"); } };
 $("gearBtn").onclick=()=>setTab(tab==="settings"?"items":"settings");
 $("q").addEventListener("input", render);
 $("quickBtn").onclick=quickAdd;

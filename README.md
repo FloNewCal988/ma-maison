@@ -21,7 +21,8 @@ Petite application personnelle (iPhone + ordinateur) pour :
 - Les **photos** sont chiffrées de la même façon, dans le dossier `photos/` du dépôt privé.
 - Ce fichier est **chiffré avec ton mot de passe** (AES-256-GCM, clé dérivée par PBKDF2-SHA256, 310 000 itérations) **sur ton téléphone, avant l'envoi**. Même si quelqu'un accédait au dépôt, il ne verrait qu'un bloc illisible.
 - Ton mot de passe n'est **jamais envoyé ni stocké**. Le jeton GitHub est stocké sur l'appareil, lui aussi chiffré avec ton mot de passe.
-- Verrouillage automatique après 10 minutes d'inactivité.
+- **Rester connecté sur cet appareil** (coché par défaut) : le mot de passe est chiffré avec une clé propre à ce téléphone, générée par le navigateur et impossible à extraire. Ouvrir le lien depuis un autre appareil redemande toujours le mot de passe. Le bouton 🔒 déconnecte l'appareil.
+- Sans « Rester connecté » : verrouillage automatique après 10 minutes d'inactivité.
 - ⚠️ **Mot de passe oublié = données perdues.** Fais de temps en temps un export (Réglages → Exporter) et garde-le en lieu sûr.
 
 ---
