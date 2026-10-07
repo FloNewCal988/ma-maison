@@ -175,7 +175,9 @@ nav.tabs button{position:relative}
 .sugg .chip{font-size:13px;padding:6px 10px}
 .qrbox{background:#fff;border-radius:14px;padding:8px;text-align:center;border:1px solid var(--line)}
 .qrbox img{width:100%;height:auto;display:block}
-video.scan{width:100%;border-radius:14px;background:#000;aspect-ratio:3/4;object-fit:cover;display:block}
+.scan{width:100%;border-radius:14px;background:#000;aspect-ratio:3/4;object-fit:cover;display:block}
+.scanwrap{position:relative}
+.scanwrap video{position:absolute;top:0;left:0;width:2px;height:2px;opacity:.01;pointer-events:none}
 .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .dfield{display:flex;gap:6px;align-items:center}
 .dfield .field{flex:1;min-width:0}
@@ -1720,9 +1722,9 @@ function openQrScan(){
   const lib = loadScript("https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js");
   lib.catch(()=>{});
   modal(`${sheetHead("tag","Étiquette QR","Scanner une étiquette", true)}
-    <video class="scan" id="qv" playsinline webkit-playsinline muted autoplay></video>
-    <div class="hint" id="qmsg">Vise le QR code collé sur le rangement.</div>
-    <button class="btn ghost block" id="qPhoto" style="margin-top:10px">📸 Prendre une photo de l'étiquette</button>
+    <button class="btn block" id="qPhoto" style="margin-bottom:12px">📸 Prendre une photo de l'étiquette</button>
+    <div class="scanwrap"><canvas class="scan" id="qc"></canvas><video id="qv" playsinline webkit-playsinline muted autoplay></video></div>
+    <div class="hint" id="qmsg">Ou vise le QR code avec la caméra en direct.</div>
     <input type="file" id="qFile" accept="image/*" capture="environment" class="hidden">
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="qClose">Fermer</button></div>`,
   async (bd, close)=>{
@@ -1761,7 +1763,12 @@ function openQrScan(){
       v.muted=true; v.playsInline=true; v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline","");
       v.srcObject=stream;
       try{ await v.play(); }catch(e){}
-      setTimeout(()=>{ if(!stopped && document.body.contains(v) && !v.videoWidth) msg("L'image reste noire ? Utilise « Prendre une photo de l'étiquette » juste en dessous."); }, 3000);
+      setTimeout(()=>{ if(!stopped && document.body.contains(v) && !v.videoWidth) msg("La caméra en direct ne renvoie pas d'image ici. Utilise « Prendre une photo de l'étiquette » au-dessus."); }, 3000);
+      const pc=bd.querySelector("#qc"), pg=pc.getContext("2d");
+      const paint=()=>{ if(stopped || !document.body.contains(v)) return;
+        if(v.videoWidth){ if(pc.width!==v.videoWidth){ pc.width=v.videoWidth; pc.height=v.videoHeight; } pg.drawImage(v,0,0); }
+        requestAnimationFrame(paint); };
+      requestAnimationFrame(paint);
       await lib;
       const cv=document.createElement("canvas"), g=cv.getContext("2d", {willReadFrequently:true});
       let last=0;
