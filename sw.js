@@ -1,5 +1,5 @@
 // Cache de l'application pour l'utiliser hors ligne (les données GitHub ne sont jamais mises en cache ici).
-const CACHE = "ma-maison-v3";
+const CACHE = "ma-maison-v4";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {

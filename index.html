@@ -53,6 +53,8 @@ header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
 .place-head{cursor:pointer;display:flex;align-items:flex-start;gap:10px}
 .place-head .main{flex:1;min-width:0}
 .place-head .name{font-weight:600;font-size:17px}.place-head .meta{margin:2px 0 4px}
+select.field{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
+.newbox{border-left:3px solid var(--accent);padding-left:12px;margin-top:6px}
 .btn.small{padding:8px 12px;font-size:14px;margin-top:10px}
 .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:4px 4px 0 0}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
@@ -308,7 +310,7 @@ async function sync(){
       }
       const merged = merge(remoteData, S.data);
       const changed = !remote || JSON.stringify(merged) !== JSON.stringify(remoteData);
-      S.data = merged;
+      S.data = merged; S.data.places ||= []; normalizeLocations();
       if(!changed){ S.sha = remote.sha; S.dirty=false; break; }
       try{
         const blob = await encryptStr(S.pw, JSON.stringify(S.data), remote?.blob?.salt || S.cfg.salt);
@@ -402,7 +404,7 @@ const fmtDate = t => t ? new Date(t).toLocaleDateString("fr-FR",{day:"numeric",m
 function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
 
-function startApp(){ S.data.places ||= []; show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
+function startApp(){ S.data.places ||= []; if(normalizeLocations()) touch(); show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
 
 const TITLES = {items:"Rangement", places:"Lieux", infos:"Infos maison", settings:"Réglages"};
 function setTab(t){
@@ -507,12 +509,44 @@ function parseQuick(s){
   const locLabel = (keepPrep ? prep+" " : "") + loc;
   return {name:cap(name), location:cap(locLabel.trim())};
 }
+/* ---- reconnaissance tolérante des rangements ---- */
+const STOP = new Set(["de","la","le","les","l","du","des","d","a","au","aux","en","dans","sur","sous","un","une","mon","ma","mes"]);
+function placeKey(x){ return norm(x).replace(/['’\-_.,;:!?()]/g," ").split(/\s+/).filter(w=>w && !STOP.has(w)).join(" "); }
+function lev(a,b){
+  if(a===b) return 0; const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,j)=>j), cur=new Array(n+1);
+  for(let i=1;i<=m;i++){ cur[0]=i; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); [prev,cur]=[cur,prev]; }
+  return prev[n];
+}
+function closest(name, candidates){
+  const k=placeKey(name); if(!k) return null;
+  let best=null, bd=Infinity;
+  const dg = x=>x.replace(/\D/g,"");
+  for(const c of candidates){ const ck=placeKey(c); if(ck===k) return c; if(dg(ck)!==dg(k)) continue; const d=lev(ck.replace(/ /g,""),k.replace(/ /g,"")); if(d<bd){bd=d;best=c;} }
+  const tol = Math.max(1, Math.round(k.replace(/ /g,"").length/6));
+  return bd<=tol ? best : null;
+}
+function findPlace(name){ const d=live(S.data.places||[]); const n=closest(name, d.map(p=>p.name)); return n ? d.find(p=>p.name===n) : null; }
+function normalizeLocations(){
+  let n=0; const now=Date.now(); const names=new Set(live(S.data.places||[]).map(p=>p.name));
+  for(const i of live(S.data.items)){
+    if(!i.location || names.has(i.location)) continue;
+    const p=findPlace(i.location); if(p){ i.location=p.name; i.updatedAt=now; n++; }
+  }
+  return n;
+}
+
 function quickAdd(){
   const v = $("quickIn").value; if(!v.trim()) return;
   const p = parseQuick(v);
   if(!p){ openItem({name:v.trim()}); return; }
-  const known = live(S.data.places||[]).find(x=>norm(x.name)===norm(p.location));
+  const known = findPlace(p.location);
   if(known) p.location = known.name;
+  else {
+    const loose = closest(p.location, [...new Set(live(S.data.items).map(i=>i.location).filter(Boolean))]);
+    if(loose) p.location = loose;
+    else { $("quickIn").value=""; openItem({name:p.name, newLocName:p.location}); return; }
+  }
   const existing = live(S.data.items).find(i=>norm(i.name)===norm(p.name));
   if(existing){
     if(norm(existing.location)!==norm(p.location)){
@@ -535,22 +569,58 @@ function modal(html, onReady){
   function close(){ root.innerHTML=""; }
   onReady(bd, close);
 }
+function locOptions(current){
+  const declared = live(S.data.places||[]);
+  const groups = {};
+  for(const p of declared) (groups[p.room||"Autres rangements"] ||= []).push(p.name);
+  const declaredNames = new Set(declared.map(p=>p.name));
+  const loose = [...new Set(live(S.data.items).map(i=>i.location).filter(l=>l && !declaredNames.has(l)))];
+  if(current && !declaredNames.has(current) && !loose.includes(current)) loose.push(current);
+  if(loose.length) (groups["Non classés"] ||= []).push(...loose);
+  const order = Object.keys(groups).sort((a,b)=>{ const r=x=>x==="Non classés"?2:x==="Autres rangements"?1:0; return r(a)-r(b) || a.localeCompare(b,"fr"); });
+  let h = `<option value="">— Choisir un rangement —</option>`;
+  for(const g of order) h += `<optgroup label="${esc(g)}">` + groups[g].sort((a,b)=>a.localeCompare(b,"fr")).map(n=>`<option value="${esc(n)}"${n===current?" selected":""}>${esc(n)}</option>`).join("") + `</optgroup>`;
+  h += `<option value="__new">＋ Nouveau rangement…</option>`;
+  return h;
+}
 function openItem(existing){
   const it = existing && existing.id ? existing : null;
+  const startNew = !!existing?.newLocName || !live(S.data.places||[]).length && !live(S.data.items).length;
   modal(`<h2>${it?"Modifier l'objet":"Nouvel objet rangé"}</h2>
     <label>Objet</label><input class="field" id="fName" value="${esc(existing?.name||"")}" placeholder="ex. Tente">
-    <label>Où est-il rangé ?</label><input class="field" id="fLoc" list="placesDL" value="${esc(existing?.location||"")}" placeholder="ex. Armoire de la terrasse">
+    <label>Où est-il rangé ?</label><select class="field" id="fLoc">${locOptions(existing?.location||"")}</select>
+    <div id="fNewBox" class="newbox hidden">
+      <label>Nom du nouveau rangement</label><input class="field" id="fNewName" value="${esc(existing?.newLocName||"")}" placeholder="ex. Armoire de la terrasse">
+      <label>Pièce</label><input class="field" id="fNewRoom" list="roomsDL" placeholder="ex. Terrasse">
+    </div>
     <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
     <div class="actions">${it?`<button class="btn danger" id="fDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="fCancel">Annuler</button><button class="btn" id="fSave">Enregistrer</button></div>`,
   (bd, close)=>{
-    setTimeout(()=>bd.querySelector(it||!existing?.name?"#fName":"#fLoc").focus(), 60);
+    const sel=bd.querySelector("#fLoc"), box=bd.querySelector("#fNewBox");
+    const sync=()=>box.classList.toggle("hidden", sel.value!=="__new");
+    if(startNew) sel.value="__new";
+    sync();
+    sel.onchange=()=>{ sync(); if(sel.value==="__new") bd.querySelector("#fNewName").focus(); };
+    setTimeout(()=>bd.querySelector(!existing?.name ? "#fName" : existing?.newLocName ? "#fNewRoom" : "#fLoc").focus(), 60);
     bd.querySelector("#fCancel").onclick=close;
     bd.querySelector("#fSave").onclick=()=>{
-      const name=bd.querySelector("#fName").value.trim(), location=bd.querySelector("#fLoc").value.trim(), notes=bd.querySelector("#fNotes").value.trim();
+      const name=bd.querySelector("#fName").value.trim(), notes=bd.querySelector("#fNotes").value.trim();
       if(!name) return bd.querySelector("#fName").focus();
+      let location = sel.value;
+      if(location==="__new"){
+        const nn=bd.querySelector("#fNewName").value.trim(), room=bd.querySelector("#fNewRoom").value.trim();
+        if(!nn) return bd.querySelector("#fNewName").focus();
+        const ex=findPlace(nn);
+        if(ex){ location=ex.name; if(room && !ex.room){ ex.room=room; ex.updatedAt=Date.now(); } toast(`Rangement existant utilisé : ${ex.name}`); }
+        else { S.data.places.push({id:uid(),name:nn,room,notes:"",updatedAt:Date.now()}); location=nn; }
+      }
       if(it) Object.assign(it,{name,location,notes,updatedAt:Date.now()});
-      else S.data.items.push({id:uid(),name,location,notes,updatedAt:Date.now()});
+      else {
+        const dup = live(S.data.items).find(i=>norm(i.name)===norm(name));
+        if(dup && confirm(`« ${dup.name} » existe déjà (${dup.location||"sans lieu"}). Le déplacer ici plutôt que créer un doublon ?`)) Object.assign(dup,{location,notes:notes||dup.notes,updatedAt:Date.now()});
+        else S.data.items.push({id:uid(),name,location,notes,updatedAt:Date.now()});
+      }
       touch(); close(); $("quickIn").value=""; render();
     };
     if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
@@ -579,6 +649,7 @@ function openPlace(p, presetName){
       if(oldName && norm(oldName)!==norm(name)){
         for(const i of live(S.data.items)) if(norm(i.location)===norm(oldName)){ i.location=name; i.updatedAt=now; }
       }
+      normalizeLocations();
       touch(); close(); render();
     };
     if(p) bd.querySelector("#pDel").onclick=()=>{
