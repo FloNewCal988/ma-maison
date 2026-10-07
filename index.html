@@ -37,7 +37,11 @@ button,input,textarea,select{font:inherit;color:inherit}
 .wrap{max-width:720px;margin:0 auto;padding:16px}
 header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
 header.top .row{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:6px}
-header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
+header.top h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.infobtn{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--accent);background:var(--accent-soft);color:var(--accent);font:italic 700 14px Georgia,'Times New Roman',serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;margin-left:2px}
+.helprow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.45}
+.helprow:first-child{border-top:0}
+.helprow .hi{flex:none;width:22px;text-align:center}
 .sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-right:4px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .dot.ok{background:var(--accent)}.dot.busy{background:var(--warn)}.dot.err{background:var(--danger)}
@@ -233,6 +237,8 @@ details.more summary{padding:10px 0 4px;font-weight:600}
   <header class="top">
     <div class="row">
       <h1 id="title">Rangement</h1>
+      <button class="infobtn" id="infoBtn" title="Comment ça marche" aria-label="Comment ça marche">i</button>
+      <div style="flex:1"></div>
       <div class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt"></span></div>
       <button class="iconbtn" id="gearBtn" title="Réglages" aria-label="Réglages">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -980,6 +986,7 @@ const ICONS = {
   plus:  SV('<path d="M12 5v14M5 12h14"/>'),
   task:  SV('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
   tag:   SV('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>'),
+  help:  SV('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   image: SV('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>')
 };
 function sheetHead(icon, kind, title, alt){
@@ -1885,6 +1892,47 @@ function openQrScan(){
   });
 }
 
+/* ================= AIDE PAR ONGLET ================= */
+const HELP = {
+  items: ["Retrouver et ranger tes objets", [
+    ["✍️","Tape ou dicte « tente dans armoire terrasse » puis OK : l'objet est rangé, ou déplacé s'il existe déjà."],
+    ["➕","Le bouton + ouvre la fiche complète : photo, catégorie, prêt, garantie, péremption, contenant."],
+    ["⚠️","« À surveiller » liste ce qui demande ton attention : retards, garanties, péremptions, prêts, courses."],
+    ["🔍","La recherche trouve un objet, un rangement ou une pièce. Appuie sur un objet pour sa fiche."]]],
+  places: ["Tes pièces et rangements", [
+    ["🏠","Organisation : pièce › rangement › sous-rangement (armoire › carton › boîte)."],
+    ["➕","+ crée un rangement. Dans un rangement, « + Rangement » en crée un dedans, « + Objet » y range un objet."],
+    ["›","Appuie sur un rangement pour voir son contenu ; « ↑ » pour remonter d'un niveau."],
+    ["🏷️","QR : imprime une étiquette à coller. « Scanner une étiquette » ouvre directement le rangement."]]],
+  gallery: ["Tous tes objets en photos", [
+    ["🗂️","Filtre par catégorie, ou « 🤝 Prêtés » pour voir ce qui est chez quelqu'un d'autre."],
+    ["🖼️","Appuie sur un objet pour sa fiche complète et son emplacement exact."],
+    ["📷","Pour ajouter une photo : fiche de l'objet → Modifier → Ajouter une photo."]]],
+  courses: ["Liste de courses et achats", [
+    ["📝","À acheter : ta liste, à cocher en magasin. Marquer un article « Fini » l'y ajoute."],
+    ["🧾","Mes achats : « Scanner un ticket », vérifie la liste lue, puis enregistre."],
+    ["🔗","Après un achat, l'app te propose des rapprochements (liste, objets à racheter) : tu valides ou non."],
+    ["✅","« Il en reste / Fini » : pour savoir en magasin s'il faut racheter. La recherche montre la date du dernier achat."]]],
+  infos: ["Entretien et infos de la maison", [
+    ["🧰","Entretien : tâches récurrentes (filtres de clim…). « ✓ Fait » calcule la prochaine date."],
+    ["🔔","« M'avertir » (dans une tâche) ajoute un rappel répété dans ton Calendrier."],
+    ["📌","Infos : ton pense-bête (ex. poubelle cuisine → sacs 20 L). Il s'affiche aussi dans ta liste de courses."],
+    ["🔴","La pastille rouge sur l'onglet Maison = tâches en retard."]]],
+  settings: ["Réglages", [
+    ["🏷️","Pièces et catégories : appuie pour renommer, changer l'icône ou supprimer ; « + Ajouter » pour en créer."],
+    ["🔄","Synchronisation : tes données sont chiffrées puis envoyées sur ton GitHub privé. Point vert = à jour."],
+    ["🔒","« Rester connecté » évite le mot de passe sur ce téléphone. Le cadenas en haut déconnecte l'appareil."],
+    ["💾","Exporter : sauvegarde lisible (sans photos) à garder en lieu sûr. Importer la fusionne avec tes données."],
+    ["📱","« Oublier cet appareil » efface la connexion locale ; tes données sur GitHub ne bougent pas."]]]
+};
+function openHelp(){
+  const [title, rows] = HELP[tab] || HELP.items;
+  modal(`${sheetHead("help","Comment ça marche", esc(title))}
+    <div style="margin-top:6px">${rows.map(([ic,t])=>`<div class="helprow"><span class="hi">${ic}</span><span>${esc(t)}</span></div>`).join("")}</div>
+    <div class="actions"><span class="spacer"></span><button class="btn" id="hOk">Compris</button></div>`,
+  (bd, close)=>{ bd.querySelector("#hOk").onclick=close; });
+}
+
 /* ================= RÉGLAGES ================= */
 function changePassword(){
   modal(`${sheetHead("lock","Sécurité","Changer le mot de passe")}
@@ -1949,6 +1997,7 @@ $("sPw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doSetup(); });
 $("unlockBtn").onclick=doUnlock;
 $("lPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doUnlock(); });
 $("forgetBtn").onclick=forget; $("forgetBtn2").onclick=forget;
+$("infoBtn").onclick=openHelp;
 $("lockNow").onclick=()=>{ if(!isRemembered() || confirm("Te déconnecter de cet appareil ? Le mot de passe sera redemandé à la prochaine ouverture.")) lock(true); };
 $("remToggle").onchange=async e=>{ if(e.target.checked){ await rememberDevice(S.pw); toast("Cet appareil restera connecté"); } else { forgetDevice(); toast("Le mot de passe sera demandé à chaque ouverture"); } };
 $("gearBtn").onclick=()=>setTab(tab==="settings"?"items":"settings");
