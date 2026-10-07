@@ -3,7 +3,7 @@
 Petite application personnelle (iPhone + ordinateur) pour :
 
 - **Rangement** : noter où sont rangées tes affaires (« la tente dans l'armoire de la terrasse ») et les retrouver par recherche.
-- **Lieux** : voir tout ce qui est rangé à un endroit donné.
+- **Lieux** : créer ses rangements (armoire, tiroir, étagère…) classés par pièce, et voir ce que contient chacun.
 - **Infos maison** : un pense-bête de la maison (« Poubelle cuisine → sacs de 20 L »).
 
 ## 🔒 Sécurité
@@ -61,7 +61,8 @@ Petite application personnelle (iPhone + ordinateur) pour :
   - « perceuse au garage »
   - « les clés sur l'étagère de l'entrée »
   Si l'objet existe déjà, il est simplement **déplacé** vers le nouveau lieu.
-- **Bouton +** : formulaire complet (avec précisions : étagère, sac, boîte…).
+- **Onglet Lieux → bouton +** : crée un rangement vide (nom + pièce), puis « + Ajouter un objet ici ». Appuie sur un rangement pour le renommer (les objets suivent).
+- **Bouton + (onglet Rangement)** : formulaire complet (avec précisions : étagère, sac, boîte…).
 - **Infos maison** : bouton + → Sujet `Poubelle cuisine` · Info `Sacs poubelle de 20 L` · Catégorie `Courses`.
 - **Recherche** : en haut de chaque onglet, sans se soucier des accents ni des majuscules.
 - **Hors ligne** : l'app fonctionne ; les modifications partent sur GitHub au retour du réseau.

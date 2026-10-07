@@ -48,6 +48,12 @@ header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:-.01em}
 .item .name{font-weight:600}
 .item .where{color:var(--accent);font-size:15px;margin-top:2px}
 .item .meta{color:var(--muted);font-size:13px;margin-top:4px;word-wrap:break-word}
+.sub{display:flex;gap:8px;align-items:baseline;padding:9px 2px;border-top:1px solid var(--line);cursor:pointer}
+.sub .name{font-weight:500}.sub .meta{margin:0}
+.place-head{cursor:pointer;display:flex;align-items:flex-start;gap:10px}
+.place-head .main{flex:1;min-width:0}
+.place-head .name{font-weight:600;font-size:17px}.place-head .meta{margin:2px 0 4px}
+.btn.small{padding:8px 12px;font-size:14px;margin-top:10px}
 .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:4px 4px 0 0}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
 .quick{display:flex;gap:8px;margin-top:12px}
@@ -154,7 +160,7 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
       <div class="list" id="itemsList"></div>
     </section>
     <!-- Lieux -->
-    <section id="tab-places" class="hidden"><div id="placesList"></div></section>
+    <section id="tab-places" class="hidden"><div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets.</div><div id="placesList"></div></section>
     <!-- Infos -->
     <section id="tab-infos" class="hidden"><div id="infosList"></div></section>
     <!-- Réglages -->
@@ -196,6 +202,7 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--accent)}
 <div id="modalRoot"></div>
 <datalist id="placesDL"></datalist>
 <datalist id="catsDL"></datalist>
+<datalist id="roomsDL"></datalist>
 
 <script>
 "use strict";
@@ -259,11 +266,11 @@ async function ghPut(c, token, blob, sha){
 
 /* ================= DONNÉES ================= */
 let S = { pw:null, token:null, cfg:null, data:null, sha:null, dirty:false };
-function emptyData(){ return {v:1, items:[], infos:[]}; }
+function emptyData(){ return {v:1, items:[], infos:[], places:[]}; }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function merge(a, b){
   const out = emptyData();
-  for(const k of ["items","infos"]){
+  for(const k of ["items","infos","places"]){
     const m = new Map();
     for(const x of [...(a?.[k]||[]), ...(b?.[k]||[])]){
       const cur = m.get(x.id);
@@ -388,14 +395,14 @@ document.addEventListener("visibilitychange", ()=>{
 });
 
 /* ================= INTERFACE ================= */
-let tab="items";
+let tab="items", placeIndex=new Map();
 const norm = s => (s||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
 const esc = s => (s||"").toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate = t => t ? new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"}) : "";
 function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
 
-function startApp(){ show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
+function startApp(){ S.data.places ||= []; show("appView"); lastAct=Date.now(); render(); setSync(S.dirty?"busy":"ok", ""); }
 
 const TITLES = {items:"Rangement", places:"Lieux", infos:"Infos maison", settings:"Réglages"};
 function setTab(t){
@@ -414,8 +421,12 @@ function render(){
   const q = $("q").value;
   const items = live(S.data.items), infos = live(S.data.infos);
   // datalists
-  const places = [...new Set(items.map(i=>i.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
-  $("placesDL").innerHTML = places.map(p=>`<option value="${esc(p)}">`).join("");
+  const declared = live(S.data.places||[]);
+  const places = [...new Set([...declared.map(p=>p.name), ...items.map(i=>i.location)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
+  const roomOf = n => (declared.find(p=>norm(p.name)===norm(n))||{}).room||"";
+  $("placesDL").innerHTML = places.map(p=>`<option value="${esc(p)}">${esc(roomOf(p))}</option>`).join("");
+  const rooms = [...new Set(["Cuisine","Salon","Chambre","Salle de bain","Terrasse","Garage","Buanderie","Bureau","Entrée","Jardin", ...declared.map(p=>p.room).filter(Boolean)])];
+  $("roomsDL").innerHTML = rooms.map(r=>`<option value="${esc(r)}">`).join("");
   const cats = [...new Set(["Cuisine","Salle de bain","Courses","Entretien","Jardin","Voiture","Électricité","Contacts", ...infos.map(i=>i.category).filter(Boolean)])];
   $("catsDL").innerHTML = cats.map(p=>`<option value="${esc(p)}">`).join("");
 
@@ -430,18 +441,35 @@ function render(){
           ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
           <div class="meta">Rangé le ${fmtDate(i.updatedAt)}</div>
         </div>
-      </div>`).join("") : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier rangement ci-dessus."}</div>`;
+      </div>`).join("") : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`;
   }
   if(tab==="places"){
+    const map = new Map();
+    for(const p of declared) map.set(norm(p.name), {place:p, name:p.name, room:p.room||"", items:[]});
+    for(const i of items){
+      const k = norm(i.location||"Sans lieu");
+      if(!map.has(k)) map.set(k, {place:null, name:i.location||"Sans lieu", room:"", items:[]});
+      map.get(k).items.push(i);
+    }
+    placeIndex = map;
+    const entries = [...map.entries()].filter(([k,e])=> !q || matches(q, e.name, e.room, e.place?.notes) || e.items.some(i=>matches(q, i.name, i.notes)));
     const groups = {};
-    for(const i of items){ if(!matches(q, i.name, i.location, i.notes)) continue; (groups[i.location||"Sans lieu"] ||= []).push(i); }
-    const keys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,"fr"));
-    $("placesList").innerHTML = keys.length ? keys.map(k=>`
-      <div class="group"><h3>📍 ${esc(k)} · ${groups[k].length}</h3>
-      <div class="list" style="margin-top:0">${groups[k].sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(i=>`
-        <div class="card item" data-id="${i.id}" data-kind="items"><div class="main"><div class="name">${esc(i.name)}</div>
-        ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div></div>`).join("")}</div></div>`).join("")
-      : `<div class="empty">Aucun lieu pour l'instant.</div>`;
+    for(const [k,e] of entries) (groups[e.room||"Autres rangements"] ||= []).push([k,e]);
+    const gkeys = Object.keys(groups).sort((a,b)=> a==="Autres rangements" ? 1 : b==="Autres rangements" ? -1 : a.localeCompare(b,"fr"));
+    $("placesList").innerHTML = gkeys.length ? gkeys.map(g=>`
+      <div class="group"><h3>${esc(g)}</h3><div class="list" style="margin-top:0">
+      ${groups[g].sort((a,b)=>a[1].name.localeCompare(b[1].name,"fr")).map(([k,e])=>`
+        <div class="card">
+          <div class="place-head" data-pkey="${esc(k)}"><div class="main">
+            <div class="name">📦 ${esc(e.name)}</div>
+            <div class="meta">${e.items.length} objet${e.items.length>1?"s":""}${e.place?.notes?" · "+esc(e.place.notes):""}</div>
+          </div><span class="meta">✏️</span></div>
+          ${e.items.sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(i=>`
+            <div class="sub item" data-id="${i.id}" data-kind="items"><span class="name">${esc(i.name)}</span>${i.notes?`<span class="meta">· ${esc(i.notes)}</span>`:""}</div>`).join("")}
+          <button class="btn ghost small" data-addin="${esc(e.name)}">+ Ajouter un objet ici</button>
+        </div>`).join("")}
+      </div></div>`).join("")
+      : `<div class="empty">${q?"Aucun rangement trouvé.":"Aucun rangement pour l'instant.<br>Appuie sur + pour créer ton premier rangement."}</div>`;
   }
   if(tab==="infos"){
     const list = infos.filter(i=>matches(q, i.title, i.value, i.category, i.notes));
@@ -483,6 +511,8 @@ function quickAdd(){
   const v = $("quickIn").value; if(!v.trim()) return;
   const p = parseQuick(v);
   if(!p){ openItem({name:v.trim()}); return; }
+  const known = live(S.data.places||[]).find(x=>norm(x.name)===norm(p.location));
+  if(known) p.location = known.name;
   const existing = live(S.data.items).find(i=>norm(i.name)===norm(p.name));
   if(existing){
     if(norm(existing.location)!==norm(p.location)){
@@ -524,6 +554,37 @@ function openItem(existing){
       touch(); close(); $("quickIn").value=""; render();
     };
     if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ it.deleted=true; it.updatedAt=Date.now(); touch(); close(); render(); } };
+  });
+}
+function openPlace(p, presetName){
+  const count = presetName ? live(S.data.items).filter(i=>norm(i.location)===norm(presetName)).length : 0;
+  modal(`<h2>${p?"Modifier le rangement":"Nouveau rangement"}</h2>
+    <label>Nom du rangement</label><input class="field" id="pName" value="${esc(p?.name||presetName||"")}" placeholder="ex. Armoire de la terrasse">
+    <label>Pièce</label><input class="field" id="pRoom" list="roomsDL" value="${esc(p?.room||"")}" placeholder="ex. Terrasse">
+    <label>Description (facultatif)</label><textarea class="field" id="pNotes" placeholder="ex. grande armoire blanche, 3 étagères">${esc(p?.notes||"")}</textarea>
+    <div class="actions">${p?`<button class="btn danger" id="pDel">Supprimer</button>`:""}<span class="spacer"></span>
+      <button class="btn ghost" id="pCancel">Annuler</button><button class="btn" id="pSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    setTimeout(()=>bd.querySelector(presetName&&!p?"#pRoom":"#pName").focus(), 60);
+    bd.querySelector("#pCancel").onclick=close;
+    bd.querySelector("#pSave").onclick=()=>{
+      const name=bd.querySelector("#pName").value.trim(), room=bd.querySelector("#pRoom").value.trim(), notes=bd.querySelector("#pNotes").value.trim();
+      if(!name) return bd.querySelector("#pName").focus();
+      const oldName = p?.name || presetName;
+      const dup = live(S.data.places).find(x=>x!==p && norm(x.name)===norm(name));
+      if(dup && !(oldName && norm(oldName)===norm(name))) { alert("Ce rangement existe déjà."); return; }
+      const now = Date.now();
+      if(p) Object.assign(p,{name,room,notes,updatedAt:now});
+      else S.data.places.push({id:uid(),name,room,notes,updatedAt:now});
+      if(oldName && norm(oldName)!==norm(name)){
+        for(const i of live(S.data.items)) if(norm(i.location)===norm(oldName)){ i.location=name; i.updatedAt=now; }
+      }
+      touch(); close(); render();
+    };
+    if(p) bd.querySelector("#pDel").onclick=()=>{
+      const n = live(S.data.items).filter(i=>norm(i.location)===norm(p.name)).length;
+      if(confirm(`Supprimer le rangement « ${p.name} » ?`+(n?`\nLes ${n} objet(s) rangés ici garderont cet emplacement.`:""))){ p.deleted=true; p.updatedAt=Date.now(); touch(); close(); render(); }
+    };
   });
 }
 function openInfo(it){
@@ -605,7 +666,7 @@ $("lockNow").onclick=lock;
 $("q").addEventListener("input", render);
 $("quickBtn").onclick=quickAdd;
 $("quickIn").addEventListener("keydown", e=>{ if(e.key==="Enter") quickAdd(); });
-$("fab").onclick=()=> tab==="infos" ? openInfo() : openItem();
+$("fab").onclick=()=> tab==="infos" ? openInfo() : tab==="places" ? openPlace() : openItem();
 $("syncNow").onclick=sync;
 $("chgPw").onclick=changePassword;
 $("exportBtn").onclick=exportData;
@@ -613,6 +674,10 @@ $("importBtn").onclick=()=>$("importFile").click();
 $("importFile").onchange=e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=""; };
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ $("q").value=""; setTab(b.dataset.tab); });
 document.addEventListener("click", e=>{
+  const add = e.target.closest("[data-addin]");
+  if(add){ openItem({location:add.dataset.addin}); return; }
+  const ph = e.target.closest(".place-head[data-pkey]");
+  if(ph){ const en = placeIndex.get(ph.dataset.pkey); if(en) openPlace(en.place, en.name); return; }
   const c = e.target.closest(".item[data-id]"); if(!c) return;
   const arr = S.data[c.dataset.kind], it = arr.find(x=>x.id===c.dataset.id);
   c.dataset.kind==="items" ? openItem(it) : openInfo(it);
