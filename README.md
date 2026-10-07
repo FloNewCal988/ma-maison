@@ -6,6 +6,12 @@ Petite application personnelle (iPhone + ordinateur) pour :
 - **Lieux** : créer ses rangements (armoire, tiroir, étagère…) classés par pièce, et voir ce que contient chacun.
 - **Galerie** : tous tes objets en photos, filtrables par catégorie (Camping, Outils de jardin…) ; un appui ouvre la fiche complète.
 - **Courses** : photographie un ticket de caisse → la liste des articles achetés avec la date. Chaque article a un bouton « Il en reste / Fini » pour savoir s'il faut en racheter.
+- **À surveiller** (accueil) : tâches d'entretien en retard, garanties qui expirent, produits bientôt périmés, objets prêtés depuis longtemps, articles à acheter.
+- **Liste de courses** (Courses → À acheter) : un article marqué « Fini » s'y ajoute tout seul, et se coche quand tu le rachètes. Les infos maison liées s'affichent (ex. « Sacs poubelle » → 💡 20 L).
+- **Entretien** (Maison → Entretien) : tâches récurrentes (filtres de clim, ventilateur…), bouton « Fait », échéances en couleur.
+- **Prêts, garanties, péremptions** : dans la fiche d'un objet, section « Prêt, garantie, péremption » (avec photo de facture).
+- **Étiquettes QR** : Lieux → appuie sur un rangement → 🏷️ QR, imprime et colle ; « Scanner une étiquette » affiche le contenu.
+- **🔔 M'avertir** : ajoute un rappel au Calendrier de l'iPhone (garantie, péremption, entretien récurrent).
 - **Infos maison** : un pense-bête de la maison (« Poubelle cuisine → sacs de 20 L »).
 
 ## 🔒 Sécurité

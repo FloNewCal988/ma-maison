@@ -152,6 +152,33 @@ textarea.field{min-height:72px;resize:vertical}
 details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
 .setrow{display:flex;flex-direction:column;gap:8px}
 .stack{display:flex;flex-direction:column;gap:12px}
+.alerts{margin-top:12px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden;box-shadow:var(--shadow)}
+.alerts .ah{padding:10px 14px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.alert{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);cursor:pointer}
+.alert .ic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.lv-late{background:var(--danger-soft);color:var(--danger)}.lv-soon{background:#F7EBCF;color:var(--warn)}.lv-ok{background:var(--accent-soft);color:var(--accent)}
+nav.tabs button{position:relative}
+.badge{position:absolute;top:3px;left:calc(50% + 5px);min-width:17px;height:17px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.task{display:flex;align-items:center;gap:10px}
+.task .main{flex:1;min-width:0;cursor:pointer}
+.due{display:inline-block;margin-top:6px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.shop{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.shop:first-child{border-top:0}
+.shop .main{flex:1;min-width:0}
+.chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--on);padding:0;font-size:14px;font-weight:700}
+.chk.on{background:var(--accent)}
+.shop.done .name{text-decoration:line-through;color:var(--muted)}
+.tip{font-size:13px;color:var(--accent2);margin-top:2px}
+.pill.warn{background:#F7EBCF;color:var(--warn)}.pill.loan{background:var(--accent2-soft);color:var(--accent2)}.pill.bad{background:var(--danger-soft);color:var(--danger)}
+@media (prefers-color-scheme: dark){.lv-soon,.pill.warn{background:#3A3020}}
+.sugg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sugg .chip{font-size:13px;padding:6px 10px}
+.qrbox{background:#fff;border-radius:14px;padding:8px;text-align:center;border:1px solid var(--line)}
+.qrbox img{width:100%;height:auto;display:block}
+video.scan{width:100%;border-radius:14px;background:#000;aspect-ratio:3/4;object-fit:cover;display:block}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+details.more{border:1px solid var(--line);border-radius:12px;padding:2px 12px 12px;margin-top:14px}
+details.more summary{padding:10px 0 4px;font-weight:600}
 </style>
 </head>
 <body>
@@ -210,6 +237,7 @@ details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
 
   <main class="wrap">
     <section id="tab-items">
+      <div id="alertsBox"></div>
       <div class="quick">
         <input id="quickIn" placeholder="ex. tente dans armoire terrasse" autocomplete="off">
         <button class="btn" id="quickBtn">OK</button>
@@ -219,7 +247,8 @@ details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
     </section>
 
     <section id="tab-places" class="hidden">
-      <div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets.</div>
+      <button class="btn ghost block" id="scanQrBtn">📷 Scanner une étiquette de rangement</button>
+      <div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets. Appuie sur un rangement pour voir son contenu et imprimer son étiquette QR.</div>
       <div id="placesList"></div>
     </section>
 
@@ -229,16 +258,28 @@ details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
     </section>
 
     <section id="tab-courses" class="hidden">
-      <button class="btn block" id="scanBtn">📷 Scanner un ticket de caisse</button>
+      <div class="seg" id="shopSeg" style="margin-top:0"><button data-v="list" class="on">À acheter</button><button data-v="bought">Mes achats</button></div>
+      <div id="vList">
+        <div class="quick"><input id="shopIn" placeholder="Ajouter à la liste (ex. sacs poubelle)" autocomplete="off" list="prodDL"><button class="btn" id="shopAdd">Ajouter</button></div>
+        <div class="card" style="padding:0;margin-top:12px;overflow:hidden" id="shopList"></div>
+        <button class="btn ghost small hidden" id="shopClear" style="margin-top:10px">Retirer les articles cochés</button>
+      </div>
+      <div id="vBought" class="hidden">
+      <button class="btn block" id="scanBtn" style="margin-top:12px">📷 Scanner un ticket de caisse</button>
       <input type="file" id="scanFile" accept="image/*" class="hidden">
       <div class="seg" id="courseSeg">
         <button data-f="all" class="on">Tout</button><button data-f="reste">Il en reste</button><button data-f="fini">Fini</button>
       </div>
       <div class="list" id="prodList"></div>
       <details id="receiptsBox"><summary id="receiptsSum">Tickets enregistrés</summary><div class="list" id="receiptsList"></div></details>
+      </div>
     </section>
 
-    <section id="tab-infos" class="hidden"><div id="infosList"></div></section>
+    <section id="tab-infos" class="hidden">
+      <div class="seg" id="homeSeg" style="margin-top:0"><button data-v="tasks" class="on">Entretien</button><button data-v="infos">Infos</button></div>
+      <div id="tasksList" class="list"></div>
+      <div id="infosList" class="hidden"></div>
+    </section>
 
     <section id="tab-settings" class="hidden">
       <div class="stack">
@@ -285,7 +326,7 @@ details{margin-top:14px}summary{cursor:pointer;color:var(--accent)}
     <button data-tab="places"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Lieux</button>
     <button data-tab="gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Galerie</button>
     <button data-tab="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Courses</button>
-    <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Infos</button>
+    <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Maison<span class="badge hidden" id="homeBadge"></span></button>
   </div></nav>
 </div>
 
@@ -374,7 +415,7 @@ async function ghDeleteFile(c, token, path){
 }
 
 /* ================= DONNÉES ================= */
-const KEYS = ["items","infos","places","rooms","cats","products","receipts"];
+const KEYS = ["items","infos","places","rooms","cats","products","receipts","shopping","tasks"];
 let S = { pw:null, token:null, cfg:null, data:null, dirty:false };
 function emptyData(){ const d={v:2}; for(const k of KEYS) d[k]=[]; return d; }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -518,7 +559,7 @@ const isoDay = t => { const d=new Date(t); return `${d.getFullYear()}-${String(d
 const dayTs = iso => { const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d,12).getTime(); };
 const cap = x => x ? x.charAt(0).toUpperCase()+x.slice(1) : x;
 function matches(q, ...fields){ if(!q) return true; const hay = norm(fields.flat().join(" ")); return norm(q).split(/\s+/).every(w=>hay.includes(w)); }
-function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
+function toast(msg){ document.querySelectorAll(".toast").forEach(x=>x.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3200); }
 function daysAgo(t){ const d=Math.round((Date.now()-t)/86400000); return d<=0?"aujourd'hui":d===1?"hier":d<31?`il y a ${d} j`:d<365?`il y a ${Math.round(d/30)} mois`:`il y a ${Math.round(d/365)} an${d>=730?"s":""}`; }
 
 /* reconnaissance tolérante (fautes de frappe, « de la »…) */
@@ -641,12 +682,14 @@ function hydratePhotos(root){
 const phHTML = (it, cls="") => `<div class="ph ${cls}" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}">`:""}</div>`;
 
 /* ================= INTERFACE ================= */
-let tab="items", placeIndex=new Map(), galCat="", courseFilter="all";
-const TITLES = {items:"Rangement", places:"Lieux", gallery:"Galerie", courses:"Courses", infos:"Infos maison", settings:"Réglages"};
+let tab="items", placeIndex=new Map(), galCat="", courseFilter="all", shopView="list", homeView="tasks";
+const TITLES = {items:"Rangement", places:"Lieux", gallery:"Galerie", courses:"Courses", infos:"Maison", settings:"Réglages"};
 const PH = {items:"Rechercher un objet, un rangement…", places:"Rechercher un rangement ou une pièce…", gallery:"Rechercher un objet…", courses:"Rechercher un article acheté…", infos:"Rechercher une info (ex. poubelle)…"};
 function startApp(){
   if(seedDefaults() + normalizeLocations()) touch();
   show("appView"); lastAct=Date.now(); setTab(tab); setSync(S.dirty?"busy":"ok", "");
+  const hm = location.hash.match(/#place=([\w:-]+)/);
+  if(hm){ history.replaceState(null,"",location.pathname); setTab("places"); setTimeout(()=>{ if(!openPlaceById(hm[1])) toast("Rangement introuvable."); }, 60); }
 }
 function setTab(t){
   tab=t;
@@ -659,7 +702,7 @@ function setTab(t){
   const fabLabel = {items:"Ajouter un objet", gallery:"Ajouter un objet", places:"Ajouter un rangement", courses:"Ajouter un achat", infos:"Ajouter une info"}[t];
   if(fabIcon){ $("fab").innerHTML = ICONS.plus; $("fab").setAttribute("aria-label", fabLabel); $("fab").title = fabLabel; }
   $("q").parentElement.classList.toggle("hidden", t==="settings");
-  $("q").placeholder = PH[t]||"Rechercher…";
+  $("q").placeholder = t==="courses" ? (shopView==="list"?"Rechercher dans la liste…":"Rechercher un article acheté…") : t==="infos" ? (homeView==="tasks"?"Rechercher une tâche…":"Rechercher une info (ex. poubelle)…") : (PH[t]||"Rechercher…");
   render(); scrollTo(0,0);
 }
 
@@ -669,7 +712,7 @@ function itemCard(i){
     <div class="main">
       <div class="name">${esc(i.name)}</div>
       <div class="where">📍 ${esc(i.location||"—")}${roomOfPlace(i.location)?` <span class="meta">· ${esc(roomOfPlace(i.location))}</span>`:""}</div>
-      ${i.category?`<span class="pill">${esc(i.category)}</span>`:""}
+      ${i.category?`<span class="pill">${esc(i.category)}</span>`:""}${statusPills(i)}
       ${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}
     </div></div>`;
 }
@@ -679,9 +722,13 @@ function render(){
   if(!S.data) return;
   const q = $("q").value;
   const items = live(S.data.items), infos = live(S.data.infos);
-  const itemHay = i => [i.name, i.location, roomOfPlace(i.location), i.category, i.notes];
+  const itemHay = i => [i.name, i.location, roomOfPlace(i.location), i.category, i.notes, i.loan?.to||""];
+  const al = getAlerts();
+  const nLate = al.filter(a=>a.kind==="task" && a.lv!=="ok").length;
+  $("homeBadge").textContent = nLate; $("homeBadge").classList.toggle("hidden", !nLate);
 
   if(tab==="items"){
+    $("alertsBox").innerHTML = q ? "" : alertsHTML(al);
     const list = items.filter(i=>matches(q, itemHay(i))).sort((a,b)=> q ? byName(a,b) : (b.updatedAt||0)-(a.updatedAt||0));
     $("itemsList").innerHTML = list.length ? list.map(itemCard).join("")
       : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`;
@@ -721,10 +768,13 @@ function render(){
   if(tab==="gallery"){
     const counts = {}; for(const i of items) if(i.category) counts[i.category]=(counts[i.category]||0)+1;
     const cats = Object.keys(counts).sort((a,b)=>a.localeCompare(b,"fr"));
-    if(galCat && !counts[galCat]) galCat="";
+    const nLoan = items.filter(i=>i.loan).length;
+    if(galCat && galCat!=="__loan" && !counts[galCat]) galCat="";
+    if(galCat==="__loan" && !nLoan) galCat="";
     $("galChips").innerHTML = `<button class="chip${galCat?"":" on"}" data-gcat="">Tout · ${items.length}</button>` +
-      cats.map(c=>`<button class="chip${galCat===c?" on":""}" data-gcat="${esc(c)}">${esc(catIcon(c))} ${esc(c)} · ${counts[c]}</button>`).join("");
-    const list = items.filter(i=>(!galCat||i.category===galCat) && matches(q, itemHay(i))).sort(byName);
+      cats.map(c=>`<button class="chip${galCat===c?" on":""}" data-gcat="${esc(c)}">${esc(catIcon(c))} ${esc(c)} · ${counts[c]}</button>`).join("") +
+      (nLoan?`<button class="chip${galCat==="__loan"?" on":""}" data-gcat="__loan">🤝 Prêtés · ${nLoan}</button>`:"");
+    const list = items.filter(i=>(!galCat||(galCat==="__loan"?!!i.loan:i.category===galCat)) && matches(q, itemHay(i))).sort(byName);
     $("galGrid").innerHTML = list.length ? list.map(i=>`
       <div class="tile" data-open="${i.id}">
         <div class="ph" data-emoji="${esc(catIcon(i.category))}">${i.photo?`<img alt="" data-pid="${esc(i.photo.id)}">`:""}</div>
@@ -734,6 +784,12 @@ function render(){
   }
 
   if(tab==="courses"){
+    document.querySelectorAll("#shopSeg button").forEach(b=>b.classList.toggle("on", b.dataset.v===shopView));
+    $("vList").classList.toggle("hidden", shopView!=="list"); $("vBought").classList.toggle("hidden", shopView==="list");
+    const nShop = live(S.data.shopping).filter(x=>!x.done).length;
+    $("shopSeg").querySelector('[data-v="list"]').textContent = "À acheter" + (nShop?` · ${nShop}`:"");
+    $("prodDL").innerHTML = live(S.data.products).sort(byName).map(p=>`<option value="${esc(p.name)}">`).join("");
+    renderShop(q);
     document.querySelectorAll("#courseSeg button").forEach(b=>b.classList.toggle("on", b.dataset.f===courseFilter));
     const prods = live(S.data.products)
       .filter(p=>(courseFilter==="all"||p.status===courseFilter) && matches(q, p.name, p.aliases||[]))
@@ -756,6 +812,9 @@ function render(){
   }
 
   if(tab==="infos"){
+    document.querySelectorAll("#homeSeg button").forEach(b=>b.classList.toggle("on", b.dataset.v===homeView));
+    $("tasksList").classList.toggle("hidden", homeView!=="tasks"); $("infosList").classList.toggle("hidden", homeView==="tasks");
+    renderTasks(q);
     $("infoCatsDL").innerHTML = [...new Set(["Cuisine","Salle de bain","Courses","Entretien","Jardin","Voiture","Électricité","Contacts", ...infos.map(i=>i.category).filter(Boolean)])].map(p=>`<option value="${esc(p)}">`).join("");
     const list = infos.filter(i=>matches(q, i.title, i.value, i.category, i.notes));
     const groups = {};
@@ -826,7 +885,10 @@ const ICONS = {
   cart:  SV('<path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>'),
   receipt: SV('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>'),
   lock:  SV('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
-  plus:  SV('<path d="M12 5v14M5 12h14"/>')
+  plus:  SV('<path d="M12 5v14M5 12h14"/>'),
+  task:  SV('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
+  tag:   SV('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>'),
+  image: SV('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>')
 };
 function sheetHead(icon, kind, title, alt){
   return `<div class="shead"><span class="sicon${alt?" alt":""}">${ICONS[icon]}</span><div><div class="skind${alt?" alt":""}">${esc(kind)}</div><h2>${title}</h2></div></div>`;
@@ -851,6 +913,11 @@ function openDetail(it){
       <div class="k">Pièce</div><div>${esc(room||"—")}</div>
       <div class="k">Catégorie</div><div>${it.category?esc(catIcon(it.category)+" "+it.category):"—"}</div>
       ${it.notes?`<div class="k">Précisions</div><div>${esc(it.notes)}</div>`:""}
+      ${it.loan?`<div class="k">Prêté à</div><div><strong>${esc(it.loan.to)}</strong> <span class="meta">depuis le ${fmtDate(it.loan.date)}</span><br><button class="btn ghost small" id="dReturn" style="margin-top:6px">✓ Il me l'a rendu</button></div>`:""}
+      ${it.purchaseDate?`<div class="k">Acheté le</div><div>${fmtDate(it.purchaseDate)}</div>`:""}
+      ${it.warrantyEnd?`<div class="k">Garantie</div><div>${daysUntil(it.warrantyEnd)<0?"Expirée le ":"Jusqu'au "}${fmtDate(it.warrantyEnd)}${daysUntil(it.warrantyEnd)>=0?`<br><button class="btn ghost small" data-ics="war" style="margin-top:6px">🔔 M'avertir avant la fin</button>`:""}</div>`:""}
+      ${it.expiry?`<div class="k">Péremption</div><div>${daysUntil(it.expiry)<0?"Périmé depuis le ":"Le "}${fmtDate(it.expiry)}${daysUntil(it.expiry)>=0?`<br><button class="btn ghost small" data-ics="exp" style="margin-top:6px">🔔 M'avertir</button>`:""}</div>`:""}
+      ${it.invoice?`<div class="k">Facture</div><div><div class="ph" style="width:72px;height:72px;cursor:pointer" id="dInv" data-emoji="🧾"><img alt="" data-pid="${esc(it.invoice.id)}"></div></div>`:""}
       <div class="k">Mis à jour</div><div>${fmtDate(it.updatedAt)}</div>
     </div>
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="dClose">Fermer</button><button class="btn" id="dEdit">Modifier</button></div>`,
@@ -860,6 +927,13 @@ function openDetail(it){
       loadPhotoURL(it.photo.id,"full").then(u=>{ if(u){ img.src=u; img.classList.add("ok","full"); } }); }
     bd.querySelector("#dClose").onclick=close;
     bd.querySelector("#dEdit").onclick=()=>openItem(it);
+    bd.querySelectorAll("#dInv img").forEach(()=>hydratePhotos(bd.querySelector("#dInv")));
+    const inv=bd.querySelector("#dInv"); if(inv) inv.onclick=()=>openImage(it.invoice.id, "Facture · "+it.name);
+    const ret=bd.querySelector("#dReturn"); if(ret) ret.onclick=()=>{ it.loan=null; it.updatedAt=Date.now(); touch(); close(); render(); toast(`✓ ${it.name} est de retour`); };
+    bd.querySelectorAll("[data-ics]").forEach(b=>b.onclick=()=>{
+      if(b.dataset.ics==="war") downloadIcs({title:`Fin de garantie : ${it.name}`, start:it.warrantyEnd, alarm:"-P13DT15H", desc:`La garantie de « ${it.name} » (${it.location||"—"}) se termine le ${fmtDate(it.warrantyEnd)}.`});
+      else downloadIcs({title:`Péremption : ${it.name}`, start:it.expiry, alarm:"-P6DT15H", desc:`« ${it.name} » (${it.location||"—"}) se périme le ${fmtDate(it.expiry)}.`});
+    });
   });
 }
 
@@ -867,7 +941,8 @@ function openDetail(it){
 function openItem(existing){
   const it = existing && existing.id ? existing : null;
   const noPlaces = !live(S.data.places).length && !live(S.data.items).some(i=>i.location);
-  let newPhoto=null, removePhoto=false;
+  let newPhoto=null, removePhoto=false, newInv=null, removeInv=false;
+  const hasMore = existing && (existing.loan||existing.warrantyEnd||existing.expiry||existing.purchaseDate||existing.invoice);
   modal(`${sheetHead("item","Objet", it?"Modifier l'objet":"Nouvel objet rangé")}
     <label>Objet</label><input class="field" id="fName" value="${esc(existing?.name||"")}" placeholder="ex. Tente">
     <label>Photo (facultatif)</label>
@@ -886,6 +961,21 @@ function openItem(existing){
     <label>Catégorie</label><select class="field" id="fCat">${optionsHTML(catGroups(), existing?.category||"", "— Choisir une catégorie —", "Nouvelle catégorie")}</select>
     <div id="fCatBox" class="newbox hidden"><label>Nom de la nouvelle catégorie</label><input class="field" id="fCatName" placeholder="ex. Matériel de plongée"></div>
     <label>Précisions (facultatif)</label><textarea class="field" id="fNotes" placeholder="ex. étagère du haut, dans le sac bleu">${esc(existing?.notes||"")}</textarea>
+    <details class="more"${hasMore?" open":""}><summary>Prêt, garantie, péremption</summary>
+      <label>Prêté à (laisser vide si chez toi)</label>
+      <div class="row2"><input class="field" id="fLoanTo" value="${esc(existing?.loan?.to||"")}" placeholder="ex. Julien"><input class="field" id="fLoanDate" type="date" value="${existing?.loan?isoDay(existing.loan.date):""}"></div>
+      <div class="row2"><div><label>Date d'achat</label><input class="field" id="fBuy" type="date" value="${existing?.purchaseDate?isoDay(existing.purchaseDate):""}"></div>
+      <div><label>Fin de garantie</label><input class="field" id="fWar" type="date" value="${existing?.warrantyEnd?isoDay(existing.warrantyEnd):""}"></div></div>
+      <div class="sugg"><button class="chip" data-war="1">Garantie 1 an</button><button class="chip" data-war="2">2 ans</button><button class="chip" data-war="5">5 ans</button></div>
+      <label>Photo de la facture</label>
+      <div class="photo-edit">
+        <div class="ph" id="fInv" data-emoji="🧾">${existing?.invoice?`<img alt="" data-pid="${esc(existing.invoice.id)}">`:""}</div>
+        <div class="btns"><button class="btn ghost small" id="fInvBtn">${existing?.invoice?"Changer":"Ajouter la facture"}</button>
+        <button class="btn danger small${existing?.invoice?"":" hidden"}" id="fInvDel">Retirer</button></div>
+        <input type="file" id="fInvFile" accept="image/*" class="hidden">
+      </div>
+      <label>Date de péremption</label><input class="field" id="fExp" type="date" value="${existing?.expiry?isoDay(existing.expiry):""}">
+    </details>
     <div class="actions">${it?`<button class="btn danger" id="fDel">Supprimer</button>`:""}<span class="spacer"></span>
       <button class="btn ghost" id="fCancel">Annuler</button><button class="btn" id="fSave">Enregistrer</button></div>`,
   (bd, close)=>{
@@ -902,6 +992,21 @@ function openItem(existing){
         bd.querySelector("#fPhDel").classList.remove("hidden"); bd.querySelector("#fPhBtn").textContent="Changer la photo";
       }catch(e){ toast("Impossible de lire cette image."); }
     };
+    const invEl=bd.querySelector("#fInv"), invFile=bd.querySelector("#fInvFile");
+    bd.querySelector("#fInvBtn").onclick=()=>invFile.click();
+    invFile.onchange=async()=>{
+      const f=invFile.files[0]; invFile.value=""; if(!f) return;
+      try{ newInv = await makePhoto(f); removeInv=false;
+        invEl.innerHTML = `<img alt="" class="ok" src="${URL.createObjectURL(newInv.thumb)}">`;
+        bd.querySelector("#fInvDel").classList.remove("hidden"); bd.querySelector("#fInvBtn").textContent="Changer";
+      }catch(e){ toast("Impossible de lire cette image."); }
+    };
+    bd.querySelector("#fInvDel").onclick=()=>{ newInv=null; removeInv=!!it?.invoice; invEl.innerHTML=""; bd.querySelector("#fInvDel").classList.add("hidden"); bd.querySelector("#fInvBtn").textContent="Ajouter la facture"; };
+    bd.querySelectorAll("[data-war]").forEach(b=>b.onclick=()=>{
+      const buy=bd.querySelector("#fBuy"); if(!buy.value) buy.value=isoDay(Date.now());
+      const d=new Date(dayTs(buy.value)); d.setFullYear(d.getFullYear()+(+b.dataset.war)); bd.querySelector("#fWar").value=isoDay(d.getTime());
+    });
+    bd.querySelector("#fLoanTo").addEventListener("input", e=>{ const ld=bd.querySelector("#fLoanDate"); if(e.target.value.trim() && !ld.value) ld.value=isoDay(Date.now()); });
     bd.querySelector("#fPhDel").onclick=()=>{ newPhoto=null; removePhoto=!!it?.photo; ph.innerHTML=""; bd.querySelector("#fPhDel").classList.add("hidden"); bd.querySelector("#fPhBtn").textContent="Ajouter une photo"; };
     setTimeout(()=>{ const f = !existing?.name ? "#fName" : existing?.newLocName ? "#fNewName" : null; if(f) bd.querySelector(f).focus(); }, 60);
     bd.querySelector("#fCancel").onclick=close;
@@ -933,11 +1038,21 @@ function openItem(existing){
         try{ await uploadPhoto(pid, newPhoto); if(photo) deletePhoto(photo.id); photo={id:pid}; }
         catch(e){ toast("Photo non envoyée : "+(e.message||"connexion ?")); btn.disabled=false; btn.textContent="Enregistrer"; delete bd.dataset.busy; return; }
       } else if(removePhoto && photo){ deletePhoto(photo.id); photo=null; }
-      const fields = {name, location, category, notes, photo, updatedAt:Date.now()};
+      let invoice = target?.invoice || null;
+      if(newInv){
+        btn.disabled=true; btn.textContent="Envoi de la facture…"; bd.dataset.busy="1";
+        const pid = uid();
+        try{ await uploadPhoto(pid, newInv); if(invoice) deletePhoto(invoice.id); invoice={id:pid}; }
+        catch(e){ toast("Facture non envoyée : "+(e.message||"connexion ?")); btn.disabled=false; btn.textContent="Enregistrer"; delete bd.dataset.busy; return; }
+      } else if(removeInv && invoice){ deletePhoto(invoice.id); invoice=null; }
+      const dv = id => { const v=bd.querySelector(id).value; return v ? dayTs(v) : null; };
+      const loanTo = cap(bd.querySelector("#fLoanTo").value.trim());
+      const loan = loanTo ? {to:loanTo, date: dv("#fLoanDate") || target?.loan?.date || Date.now()} : null;
+      const fields = {name, location, category, notes, photo, invoice, loan, purchaseDate:dv("#fBuy"), warrantyEnd:dv("#fWar"), expiry:dv("#fExp"), updatedAt:Date.now()};
       if(target) Object.assign(target, fields); else S.data.items.push({id:uid(), ...fields});
       touch(); close(); $("quickIn").value=""; render();
     };
-    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ if(it.photo) deletePhoto(it.photo.id); it.deleted=true; it.photo=null; it.updatedAt=Date.now(); touch(); close(); render(); } };
+    if(it) bd.querySelector("#fDel").onclick=()=>{ if(confirm(`Supprimer « ${it.name} » ?`)){ if(it.photo) deletePhoto(it.photo.id); if(it.invoice) deletePhoto(it.invoice.id); it.deleted=true; it.photo=null; it.invoice=null; it.updatedAt=Date.now(); touch(); close(); render(); } };
   });
 }
 
@@ -1045,6 +1160,8 @@ function addPurchase(name, ts, qty, receiptId){
   else if(norm(name)!==norm(p.name) && !(p.aliases||[]).some(a=>norm(a)===norm(name))) (p.aliases ||= []).push(name);
   (p.history ||= []).push({date:ts, qty:qty||1, receiptId:receiptId||null});
   p.lastDate = Math.max(p.lastDate||0, ts); p.status="reste"; p.updatedAt=Date.now();
+  const names=[p.name, ...(p.aliases||[])];
+  for(const x of live(S.data.shopping)) if(!x.done && (norm(x.name)===norm(name) || closest(x.name, names, 9) || wordsIn(x.name, name))){ x.done=true; x.updatedAt=Date.now(); }
 }
 function openProduct(p){
   const hist = [...(p.history||[])].sort((a,b)=>b.date-a.date);
@@ -1065,7 +1182,10 @@ function openProduct(p){
     bd.querySelector("#prSave").onclick=()=>{
       const name=cap(bd.querySelector("#prName").value.trim()); if(!name) return;
       if(norm(name)!==norm(p.name) && !(p.aliases||[]).some(a=>norm(a)===norm(p.name))) (p.aliases ||= []).push(p.name);
-      Object.assign(p,{name,status,updatedAt:Date.now()}); touch(); close(); render();
+      const wasFini = p.status==="fini";
+      Object.assign(p,{name,status,updatedAt:Date.now()});
+      if(status==="fini" && !wasFini && addToShop(name)) toast("Ajouté à la liste de courses");
+      touch(); close(); render();
     };
     bd.querySelector("#prDel").onclick=()=>{ if(confirm(`Supprimer « ${p.name} » et son historique ?`)){ p.deleted=true; p.updatedAt=Date.now(); touch(); close(); render(); } };
   });
@@ -1217,6 +1337,248 @@ function openReceiptReview(parsed){
   });
 }
 
+/* ================= DATES / RAPPELS ================= */
+const DAY = 86400000;
+const startOfDay = t => { const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+const daysUntil = t => Math.round((startOfDay(t)-startOfDay(Date.now()))/DAY);
+function addInterval(ts, n, unit){ const d=new Date(ts); if(unit==="j") d.setDate(d.getDate()+n); else if(unit==="s") d.setDate(d.getDate()+7*n); else if(unit==="m") d.setMonth(d.getMonth()+n); else d.setFullYear(d.getFullYear()+n); return d.getTime(); }
+function freqLabel(n, unit){ const u={j:["jour","jours"],s:["semaine","semaines"],m:["mois","mois"],a:["an","ans"]}[unit]||["mois","mois"]; return n==1 ? (unit==="s"?"Chaque semaine":unit==="j"?"Chaque jour":unit==="a"?"Chaque année":"Chaque mois") : `Tous les ${n} ${u[1]}`; }
+function dueLabel(ts){ const d=daysUntil(ts); return d<-1?`En retard de ${-d} j`:d===-1?"En retard d'1 j":d===0?"Aujourd'hui":d===1?"Demain":d<14?`Dans ${d} j`:fmtDate(ts); }
+const level = d => d<0 ? "late" : d<=3 ? "soon" : "ok";
+function getAlerts(){
+  if(!S.data) return [];
+  const out=[];
+  for(const t of live(S.data.tasks)){ const d=daysUntil(t.nextDue); if(d<=3) out.push({kind:"task", id:t.id, lv:level(d), icon:"🧰", text:t.title, sub:dueLabel(t.nextDue)}); }
+  for(const i of live(S.data.items)){
+    if(i.expiry){ const d=daysUntil(i.expiry); if(d<=30) out.push({kind:"item", id:i.id, lv:d<0?"late":"soon", icon:"⏳", text:i.name, sub:d<0?`Périmé depuis le ${fmtDate(i.expiry)}`:`Se périme ${d===0?"aujourd'hui":"le "+fmtDate(i.expiry)}`}); }
+    if(i.warrantyEnd){ const d=daysUntil(i.warrantyEnd); if(d<=30 && d>=-7) out.push({kind:"item", id:i.id, lv:d<0?"late":"soon", icon:"🧾", text:`Garantie : ${i.name}`, sub:d<0?`Expirée le ${fmtDate(i.warrantyEnd)}`:`Expire le ${fmtDate(i.warrantyEnd)}`}); }
+    if(i.loan){ const d=-daysUntil(i.loan.date); if(d>=30) out.push({kind:"item", id:i.id, lv:"soon", icon:"🤝", text:`${i.name} prêté à ${i.loan.to}`, sub:`Depuis ${d} jours`}); }
+  }
+  const n = live(S.data.shopping).filter(x=>!x.done).length;
+  if(n) out.push({kind:"shop", id:"", lv:"ok", icon:"🛒", text:`${n} article${n>1?"s":""} à acheter`, sub:"Voir la liste de courses"});
+  const rank={late:0,soon:1,ok:2};
+  return out.sort((a,b)=>rank[a.lv]-rank[b.lv]);
+}
+function alertsHTML(al){
+  if(!al.length) return "";
+  return `<div class="alerts"><div class="ah">À surveiller</div>${al.map(a=>`<div class="alert" data-alert="${a.kind}:${esc(a.id)}"><span class="ic lv-${a.lv}">${a.icon}</span><div style="flex:1;min-width:0"><div class="name" style="font-size:15px">${esc(a.text)}</div><div class="meta" style="margin:0">${esc(a.sub)}</div></div></div>`).join("")}</div>`;
+}
+function statusPills(i){
+  let h="";
+  if(i.loan) h+=`<span class="pill loan">🤝 Prêté à ${esc(i.loan.to)}</span>`;
+  if(i.expiry){ const d=daysUntil(i.expiry); if(d<0) h+=`<span class="pill bad">Périmé</span>`; else if(d<=30) h+=`<span class="pill warn">Périme ${d===0?"aujourd'hui":"le "+fmtDate(i.expiry)}</span>`; }
+  if(i.warrantyEnd){ const d=daysUntil(i.warrantyEnd); if(d>=0 && d<=30) h+=`<span class="pill warn">Garantie expire bientôt</span>`; else if(d>30) h+=`<span class="pill">Sous garantie</span>`; }
+  return h;
+}
+function icsEsc(x){ return (x||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+function downloadIcs({title, start, desc, rrule, alarm}){
+  const ymd = x => `${x.getFullYear()}${String(x.getMonth()+1).padStart(2,"0")}${String(x.getDate()).padStart(2,"0")}`;
+  const d=new Date(start), e=new Date(start); e.setDate(e.getDate()+1);
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ma Maison//FR","CALSCALE:GREGORIAN","METHOD:PUBLISH","BEGIN:VEVENT",`UID:${uid()}@ma-maison`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${ymd(d)}`,`DTEND;VALUE=DATE:${ymd(e)}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(desc||"Rappel Ma Maison")}`];
+  if(rrule) L.push("RRULE:"+rrule);
+  L.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${icsEsc(title)}`,`TRIGGER:${alarm||"-PT15H"}`,"END:VALARM","END:VEVENT","END:VCALENDAR");
+  const blob = new Blob([L.join("\r\n")+"\r\n"], {type:"text/calendar"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="rappel-ma-maison.ics";
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+  toast("Ouvre le fichier pour l'ajouter à ton Calendrier");
+}
+const scriptCache = new Map();
+function loadScript(src){
+  if(scriptCache.has(src)) return scriptCache.get(src);
+  const pr = new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>{ scriptCache.delete(src); s.remove(); rej(new Error("Chargement impossible (vérifie ta connexion).")); }; document.head.appendChild(s); });
+  scriptCache.set(src, pr); return pr;
+}
+function openImage(pid, title){
+  modal(`${sheetHead("image","Photo", esc(title))}<div class="hero" data-emoji="🧾" style="aspect-ratio:3/4"><img alt="" data-pid="${esc(pid)}" data-kind="full"></div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="imClose">Fermer</button></div>`, (bd, close)=>{ hydratePhotos(bd); bd.querySelector("#imClose").onclick=close; });
+}
+
+/* ================= LISTE DE COURSES ================= */
+function wordsIn(a, b){ // tous les mots de a se retrouvent dans b (« lait » ⊂ « lait demi-écrémé »)
+  const wa=placeKey(a).split(" ").filter(w=>w.length>=3), wb=placeKey(b).split(" ");
+  return wa.length>0 && wa.every(w=>wb.some(x=>x===w || x.replace(/s$/,"")===w.replace(/s$/,"")));
+}
+function findProductLoose(name){ return findProduct(name) || live(S.data.products).filter(p=>[p.name,...(p.aliases||[])].some(n=>wordsIn(name,n))).sort((a,b)=>(b.lastDate||0)-(a.lastDate||0))[0] || null; }
+function addToShop(name, qty){
+  name=cap((name||"").trim()); if(!name) return false;
+  const open = live(S.data.shopping).filter(x=>!x.done);
+  if(open.some(x=>norm(x.name)===norm(name)) || closest(name, open.map(x=>x.name), 9)) return false;
+  S.data.shopping.push({id:uid(), name, qty:qty||1, done:false, updatedAt:Date.now()}); touch(); return true;
+}
+function infoTipFor(name){
+  const words = placeKey(name).split(" ").filter(w=>w.length>=4).map(w=>w.replace(/s$/,""));
+  if(!words.length) return null;
+  return live(S.data.infos).find(i=>{ const h=placeKey([i.title,i.value,i.notes].join(" ")); return words.some(w=>h.includes(w)); }) || null;
+}
+function renderShop(q){
+  const list = live(S.data.shopping).filter(x=>matches(q, x.name)).sort((a,b)=>(a.done-b.done) || (b.updatedAt-a.updatedAt));
+  $("shopList").innerHTML = list.length ? list.map(x=>{
+    const p = findProductLoose(x.name), tip = infoTipFor(x.name);
+    return `<div class="shop${x.done?" done":""}">
+      <button class="chk${x.done?" on":""}" data-chk="${x.id}" aria-label="${x.done?"Décocher":"Cocher"}">${x.done?"✓":""}</button>
+      <div class="main"><div class="name">${esc(x.name)}${x.qty>1?` <span class="meta">× ${x.qty}</span>`:""}</div>
+        ${tip?`<div class="tip">💡 ${esc(tip.title)} : ${esc(tip.value)}</div>`:""}
+        ${p?`<div class="meta" style="margin-top:2px">Dernier achat ${daysAgo(p.lastDate)}</div>`:""}</div>
+      <button class="iconbtn" data-unshop="${x.id}" aria-label="Retirer">✕</button></div>`; }).join("")
+    : `<div class="empty">${q?"Rien trouvé dans la liste.":"Ta liste est vide.<br>Ajoute un article ci-dessus, ou marque un produit « Fini » dans Mes achats."}</div>`;
+  $("shopClear").classList.toggle("hidden", !list.some(x=>x.done));
+}
+function shopAddFromInput(){
+  const v=$("shopIn").value.trim(); if(!v) return;
+  if(addToShop(v)) toast(`✓ ${cap(v)} ajouté`); else toast("Déjà dans la liste");
+  $("shopIn").value=""; render();
+}
+
+/* ================= ENTRETIEN ================= */
+const TASK_SUGG=[["Nettoyer les filtres de la clim",3,"m","Chambre"],["Dépoussiérer le ventilateur de plafond",1,"m",""],["Détartrer la bouilloire",2,"m","Cuisine"],["Nettoyer la hotte de cuisine",3,"m","Cuisine"],["Nettoyer les joints de la salle de bain",6,"m","Salle de bain"],["Tester les détecteurs de fumée",6,"m",""],["Traitement anti-cafards et insectes",6,"m",""],["Tailler la haie",3,"m","Jardin"],["Laver les rideaux",6,"m",""],["Vidange de la voiture",1,"a",""]];
+const rruleFor = t => `FREQ=${{j:"DAILY",s:"WEEKLY",m:"MONTHLY",a:"YEARLY"}[t.unit]||"MONTHLY"};INTERVAL=${t.every}`;
+function renderTasks(q){
+  const list = live(S.data.tasks).filter(t=>matches(q, t.title, t.room||"", t.notes||"")).sort((a,b)=>a.nextDue-b.nextDue);
+  $("tasksList").innerHTML = list.length ? list.map(t=>{ const d=daysUntil(t.nextDue);
+    return `<div class="card task"><div class="main" data-task="${t.id}">
+      <div class="name">${esc(t.title)}</div>
+      <div class="meta">${esc(freqLabel(t.every,t.unit))}${t.room?" · "+esc(t.room):""}${t.lastDone?" · fait le "+fmtDate(t.lastDone):""}</div>
+      <span class="due lv-${level(d)}">${esc(dueLabel(t.nextDue))}</span></div>
+      <button class="btn small" data-done="${t.id}">✓ Fait</button></div>`; }).join("")
+    : `<div class="empty">${q?"Aucune tâche trouvée.":"Aucune tâche d'entretien.<br>Appuie sur + pour en créer une : filtres de clim, ventilateur, détartrage…"}</div>`;
+}
+function openTask(t){
+  modal(`${sheetHead("task","Entretien", t?"Modifier la tâche":"Nouvelle tâche")}
+    ${t?"":`<label>Idées</label><div class="sugg">${TASK_SUGG.map((x,i)=>`<button class="chip" data-sg="${i}">${esc(x[0])}</button>`).join("")}</div>`}
+    <label>Tâche</label><input class="field" id="tTitle" value="${esc(t?.title||"")}" placeholder="ex. Nettoyer les filtres de la clim">
+    <label>Fréquence</label>
+    <div class="row2"><input class="field" id="tEvery" type="number" min="1" inputmode="numeric" value="${t?.every||3}">
+    <select class="field" id="tUnit">${[["j","jours"],["s","semaines"],["m","mois"],["a","ans"]].map(([v,l])=>`<option value="${v}"${(t?.unit||"m")===v?" selected":""}>${l}</option>`).join("")}</select></div>
+    <label>Pièce (facultatif)</label><select class="field" id="tRoom">${optionsHTML(roomGroups(), t?.room||"", "— Aucune —", "Nouvelle pièce")}</select>
+    <div id="tRoomBox" class="newbox hidden"><label>Nom de la nouvelle pièce</label><input class="field" id="tRoomName" placeholder="ex. Véranda"></div>
+    <label>Dernière fois que c'était fait</label><input class="field" id="tLast" type="date" value="${isoDay(t?.lastDone||Date.now())}">
+    <label>Notes (facultatif)</label><textarea class="field" id="tNotes" placeholder="ex. filtres lavables à l'eau tiède">${esc(t?.notes||"")}</textarea>
+    <div class="actions">${t?`<button class="btn danger" id="tDel">Supprimer</button><button class="btn ghost" id="tIcs">🔔 M'avertir</button>`:""}<span class="spacer"></span>
+      <button class="btn ghost" id="tCancel">Annuler</button><button class="btn" id="tSave">Enregistrer</button></div>`,
+  (bd, close)=>{
+    bindNew(bd,"tRoom","tRoomBox","tRoomName");
+    bd.querySelectorAll("[data-sg]").forEach(b=>b.onclick=()=>{ const x=TASK_SUGG[+b.dataset.sg];
+      bd.querySelector("#tTitle").value=x[0]; bd.querySelector("#tEvery").value=x[1]; bd.querySelector("#tUnit").value=x[2];
+      const sel=bd.querySelector("#tRoom"); if(x[3] && [...sel.options].some(o=>o.value===x[3])){ sel.value=x[3]; sel.dispatchEvent(new Event("change")); }
+      bd.querySelectorAll("[data-sg]").forEach(c=>c.classList.toggle("on", c===b)); });
+    if(t) setTimeout(()=>{},0); else setTimeout(()=>bd.querySelector("#tTitle").focus(), 60);
+    bd.querySelector("#tCancel").onclick=close;
+    bd.querySelector("#tSave").onclick=()=>{
+      const title=cap(bd.querySelector("#tTitle").value.trim()); if(!title) return bd.querySelector("#tTitle").focus();
+      if(bd.querySelector("#tRoom").value==="__new" && !bd.querySelector("#tRoomName").value.trim()) return bd.querySelector("#tRoomName").focus();
+      const every=Math.max(1, Math.round(+bd.querySelector("#tEvery").value||1)), unit=bd.querySelector("#tUnit").value;
+      const room=readRoom(bd,"tRoom","tRoomName"), last=dayTs(bd.querySelector("#tLast").value||isoDay(Date.now()));
+      const notes=bd.querySelector("#tNotes").value.trim(), nextDue=addInterval(last, every, unit), now=Date.now();
+      if(t) Object.assign(t,{title,every,unit,room,lastDone:last,nextDue,notes,updatedAt:now});
+      else S.data.tasks.push({id:uid(),title,every,unit,room,lastDone:last,nextDue,notes,history:[],updatedAt:now});
+      touch(); close(); render(); toast(`Prochaine fois : ${fmtDate(nextDue)}`);
+    };
+    if(t){
+      bd.querySelector("#tDel").onclick=()=>{ if(confirm(`Supprimer la tâche « ${t.title} » ?`)){ t.deleted=true; t.updatedAt=Date.now(); touch(); close(); render(); } };
+      bd.querySelector("#tIcs").onclick=()=>downloadIcs({title:t.title, start:t.nextDue, rrule:rruleFor(t), alarm:"-PT15H", desc:`${freqLabel(t.every,t.unit)}${t.room?" · "+t.room:""}${t.notes?"\n"+t.notes:""}`});
+    }
+  });
+}
+function markTaskDone(t){
+  const now=Date.now(); (t.history ||= []).push(now);
+  t.lastDone=now; t.nextDue=addInterval(startOfDay(now)+12*3600000, t.every, t.unit); t.updatedAt=now;
+  touch(); render(); toast(`✓ Fait. Prochaine fois : ${fmtDate(t.nextDue)}`);
+}
+
+/* ================= RANGEMENTS : VUE, ÉTIQUETTE QR, SCAN ================= */
+function placeEntry(p){ return {place:p, name:p.name, room:p.room||"", items:live(S.data.items).filter(i=>norm(i.location)===norm(p.name))}; }
+function openPlaceById(id){ const p=live(S.data.places).find(x=>x.id===id); if(!p) return false; openPlaceView(placeEntry(p)); return true; }
+function openPlaceView(e){
+  modal(`${sheetHead("place","Rangement", esc(e.name), true)}
+    <div class="meta" style="margin:0 0 10px">${esc(e.room||"Sans pièce")} · ${e.items.length} objet${e.items.length>1?"s":""}${e.place?.notes?" · "+esc(e.place.notes):""}</div>
+    <div class="card" style="padding:2px 12px">${e.items.sort(byName).map(i=>`<div class="sub" data-vopen="${i.id}">${phHTML(i,"sm")}<div style="min-width:0"><div class="name">${esc(i.name)}</div>${statusPills(i)}</div></div>`).join("") || `<div class="meta" style="padding:12px 0">Vide pour l'instant.</div>`}</div>
+    <div class="actions"><button class="btn ghost" id="vQr">🏷️ QR</button><span class="spacer"></span><button class="btn ghost" id="vEdit">Modifier</button><button class="btn" id="vAdd">+ Objet</button></div>`,
+  (bd, close)=>{
+    hydratePhotos(bd);
+    bd.querySelectorAll("[data-vopen]").forEach(x=>x.onclick=()=>{ const i=S.data.items.find(y=>y.id===x.dataset.vopen); if(i) openDetail(i); });
+    bd.querySelector("#vEdit").onclick=()=>openPlace(e.place, e.place?null:e.name);
+    bd.querySelector("#vAdd").onclick=()=>openItem({location:e.name});
+    bd.querySelector("#vQr").onclick=()=>{ if(e.place) openLabel(e.place); else { toast("Enregistre d'abord ce rangement (Modifier) pour créer son étiquette."); } };
+  });
+}
+async function labelPNG(p, url){
+  const qr = qrcode(0, "M"); qr.addData(url); qr.make();
+  const n = qr.getModuleCount(), W=1000, H=560, c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g = c.getContext("2d");
+  g.fillStyle="#FFFFFF"; g.fillRect(0,0,W,H);
+  g.strokeStyle="#24978F"; g.lineWidth=10; g.strokeRect(5,5,W-10,H-10);
+  const qs=460, cell=Math.floor(qs/(n+2)), ox=50+Math.floor((qs-cell*n)/2), oy=Math.floor((H-cell*n)/2);
+  g.fillStyle="#000000";
+  for(let r=0;r<n;r++) for(let k=0;k<n;k++) if(qr.isDark(r,k)) g.fillRect(ox+k*cell, oy+r*cell, cell, cell);
+  const x=540, maxW=W-x-50, font = (w,sz) => `${w} ${sz}px -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  g.fillStyle="#24978F"; g.font=font(700,30); g.fillText("MA MAISON · RANGEMENT", x, 110);
+  g.fillStyle="#22302B"; let sz=60; g.font=font(700,sz);
+  const words=p.name.split(" "), lines=[]; let cur="";
+  for(const w of words){ const t=cur?cur+" "+w:w; if(g.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else cur=t; } if(cur) lines.push(cur);
+  let y=190; for(const l of lines.slice(0,3)){ g.fillText(l, x, y); y+=sz+10; }
+  if(p.room){ g.fillStyle="#6B7A22"; g.font=font(600,38); g.fillText(p.room, x, y+20); }
+  g.fillStyle="#64746D"; g.font=font(400,26); g.fillText("Scanne pour voir le contenu", x, H-60);
+  return new Promise(res=>c.toBlob(res, "image/png"));
+}
+function openLabel(p){
+  const url = location.origin + location.pathname + "#place=" + p.id;
+  modal(`${sheetHead("tag","Étiquette QR", esc(p.name), true)}
+    <div class="qrbox" id="lblBox"><div class="meta" style="padding:30px 0;color:#64746D">Création de l'étiquette…</div></div>
+    <div class="hint">Imprime-la (ou enregistre l'image) et colle-la sur le rangement. Scanne-la avec le bouton « Scanner une étiquette » de l'onglet Lieux pour voir son contenu.</div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="lClose">Fermer</button><button class="btn" id="lShare">Partager / imprimer</button></div>`,
+  async (bd, close)=>{
+    bd.querySelector("#lClose").onclick=close;
+    try{
+      await loadScript("https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js");
+      const blob = await labelPNG(p, url), src = URL.createObjectURL(blob);
+      bd.querySelector("#lblBox").innerHTML = `<img src="${src}" alt="Étiquette ${esc(p.name)}">`;
+      const file = new File([blob], `etiquette-${placeKey(p.name).replace(/ /g,"-")||"rangement"}.png`, {type:"image/png"});
+      bd.querySelector("#lShare").onclick=async()=>{
+        if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:p.name}); }catch(e){} }
+        else { const a=document.createElement("a"); a.href=src; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); }
+      };
+    }catch(e){ bd.querySelector("#lblBox").innerHTML = `<div class="err" style="padding:20px">${esc(e.message)}</div>`; }
+  });
+}
+function openQrScan(){
+  let stream=null, stopped=false;
+  const stop=()=>{ stopped=true; if(stream) stream.getTracks().forEach(t=>t.stop()); };
+  modal(`${sheetHead("tag","Étiquette QR","Scanner une étiquette", true)}
+    <video class="scan" id="qv" playsinline muted autoplay></video>
+    <div class="hint" id="qmsg">Vise le QR code collé sur le rangement.</div>
+    <div class="actions"><span class="spacer"></span><button class="btn ghost" id="qClose">Fermer</button></div>`,
+  async (bd, close)=>{
+    bd.querySelector("#qClose").onclick=()=>{ stop(); close(); };
+    bd.addEventListener("click", ev=>{ if(ev.target===bd) stop(); });
+    try{
+      await loadScript("https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js");
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false});
+      if(stopped){ stop(); return; }
+      const v=bd.querySelector("#qv"); v.srcObject=stream; await v.play();
+      const cv=document.createElement("canvas"), g=cv.getContext("2d", {willReadFrequently:true});
+      const tick=()=>{
+        if(stopped || !document.body.contains(v)){ stop(); return; }
+        if(v.readyState>=2 && v.videoWidth){
+          const s=Math.min(1, 720/Math.max(v.videoWidth, v.videoHeight)); cv.width=Math.round(v.videoWidth*s); cv.height=Math.round(v.videoHeight*s);
+          g.drawImage(v,0,0,cv.width,cv.height);
+          const code = jsQR(g.getImageData(0,0,cv.width,cv.height).data, cv.width, cv.height, {inversionAttempts:"dontInvert"});
+          if(code && code.data){
+            const m = code.data.match(/#place=([\w:-]+)/);
+            if(m){ stop(); if(!openPlaceById(m[1])){ close(); toast("Rangement introuvable (supprimé ?)."); } return; }
+            bd.querySelector("#qmsg").textContent="Ce QR code n'est pas une étiquette Ma Maison.";
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      tick();
+    }catch(e){
+      stop();
+      bd.querySelector("#qmsg").textContent = e && e.name==="NotAllowedError" ? "Accès à la caméra refusé. Autorise-le dans Réglages > Safari > Caméra, puis réessaie." : (e?.message || "Caméra indisponible.");
+    }
+  });
+}
+
 /* ================= RÉGLAGES ================= */
 function changePassword(){
   modal(`${sheetHead("lock","Sécurité","Changer le mot de passe")}
@@ -1286,7 +1648,13 @@ $("gearBtn").onclick=()=>setTab(tab==="settings"?"items":"settings");
 $("q").addEventListener("input", render);
 $("quickBtn").onclick=quickAdd;
 $("quickIn").addEventListener("keydown", e=>{ if(e.key==="Enter") quickAdd(); });
-$("fab").onclick=()=> tab==="infos" ? openInfo() : tab==="places" ? openPlace() : tab==="courses" ? openManualPurchase() : openItem();
+$("fab").onclick=()=> tab==="infos" ? (homeView==="tasks" ? openTask() : openInfo()) : tab==="places" ? openPlace() : tab==="courses" ? (shopView==="list" ? $("shopIn").focus() : openManualPurchase()) : openItem();
+$("scanQrBtn").onclick=openQrScan;
+$("shopAdd").onclick=shopAddFromInput;
+$("shopIn").addEventListener("keydown", e=>{ if(e.key==="Enter") shopAddFromInput(); });
+$("shopClear").onclick=()=>{ const now=Date.now(); for(const x of live(S.data.shopping)) if(x.done){ x.deleted=true; x.updatedAt=now; } touch(); render(); };
+document.querySelectorAll("#shopSeg button").forEach(b=>b.onclick=()=>{ shopView=b.dataset.v; $("q").value=""; setTab("courses"); });
+document.querySelectorAll("#homeSeg button").forEach(b=>b.onclick=()=>{ homeView=b.dataset.v; $("q").value=""; setTab("infos"); });
 $("syncNow").onclick=sync;
 $("chgPw").onclick=changePassword;
 $("exportBtn").onclick=exportData;
@@ -1301,9 +1669,18 @@ document.addEventListener("click", e=>{
   const t = e.target;
   let el;
   if(el=t.closest("[data-addin]")) return openItem({location:el.dataset.addin});
-  if(el=t.closest(".place-head[data-pkey]")){ const en=placeIndex.get(el.dataset.pkey); if(en) openPlace(en.place, en.place?null:en.name); return; }
+  if(el=t.closest(".place-head[data-pkey]")){ const en=placeIndex.get(el.dataset.pkey); if(en) openPlaceView(en); return; }
+  if(el=t.closest("[data-alert]")){ const [k,id]=el.dataset.alert.split(/:(.*)/);
+    if(k==="task"){ const x=S.data.tasks.find(y=>y.id===id); if(x) openTask(x); }
+    else if(k==="shop"){ shopView="list"; $("q").value=""; setTab("courses"); }
+    else { const i=S.data.items.find(y=>y.id===id); if(i) openDetail(i); }
+    return; }
+  if(el=t.closest("[data-done]")){ const x=S.data.tasks.find(y=>y.id===el.dataset.done); if(x) markTaskDone(x); return; }
+  if(el=t.closest("[data-task]")){ const x=S.data.tasks.find(y=>y.id===el.dataset.task); if(x) openTask(x); return; }
+  if(el=t.closest("[data-chk]")){ const x=S.data.shopping.find(y=>y.id===el.dataset.chk); if(x){ x.done=!x.done; x.updatedAt=Date.now(); touch(); render(); } return; }
+  if(el=t.closest("[data-unshop]")){ const x=S.data.shopping.find(y=>y.id===el.dataset.unshop); if(x){ x.deleted=true; x.updatedAt=Date.now(); touch(); render(); } return; }
   if(el=t.closest("[data-gcat]")){ galCat=el.dataset.gcat; render(); return; }
-  if(el=t.closest("[data-toggle]")){ const p=S.data.products.find(x=>x.id===el.dataset.toggle); if(p){ p.status=p.status==="fini"?"reste":"fini"; p.updatedAt=Date.now(); touch(); render(); } return; }
+  if(el=t.closest("[data-toggle]")){ const p=S.data.products.find(x=>x.id===el.dataset.toggle); if(p){ p.status=p.status==="fini"?"reste":"fini"; p.updatedAt=Date.now(); if(p.status==="fini" && addToShop(p.name)) toast(`${p.name} ajouté à la liste de courses`); touch(); render(); } return; }
   if(el=t.closest("[data-prod]")){ const p=S.data.products.find(x=>x.id===el.dataset.prod); if(p) openProduct(p); return; }
   if(el=t.closest("[data-receipt]")){ const r=S.data.receipts.find(x=>x.id===el.dataset.receipt); if(r) openReceipt(r); return; }
   if(el=t.closest("[data-listedit]")){ const [k,id]=el.dataset.listedit.split(/:(.+)/); return openListItem(k,id); }
