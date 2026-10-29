@@ -331,7 +331,7 @@ function launchShortcut(){
 function sendBatch(){
   if(validated().some(x=>!x.b64)) return toast("Préparation des fichiers en cours, réessaie dans un instant.");
   const chunk=nextChunk(); if(!chunk.length) return;
-  const payload=JSON.stringify({app:"Ma Maison", version:1, fichiers:chunk.map(x=>({nom:x.final.name, chemin:x.final.path, donnees:x.b64}))});
+  const payload=JSON.stringify({app:"Ma Maison", version:1, fichiers:chunk.map(x=>({nom:x.final.name, chemin:x.final.path, origine:x.file.name, donnees:x.b64}))});
   const rest=validated().length-chunk.length;
   let write;
   try{ write=navigator.clipboard.writeText(payload); }catch(e){ write=Promise.reject(e); }   // dans le geste de l'utilisateur
@@ -600,11 +600,15 @@ function openShortcutHelp(){
       ["5d","« Définir le nom » : renomme le résultat base64 (5b) avec la valeur « nom » (5c)."],
       ["5e","« Obtenir la valeur du dictionnaire » : clé « chemin », dans « Élément répété »."],
       ["5f","« Enregistrer le fichier » : le fichier renommé (5d) ; touche ›, désactive « Demander où enregistrer », Destination = iCloud Drive, Sous-chemin = la valeur « chemin » (5e), « Écraser si le fichier existe » DÉSACTIVÉ."],
+      ["5g","« Obtenir la valeur du dictionnaire » : clé « origine », dans « Élément répété » (nom du fichier d'origine)."],
+      ["5h","« Texte » : ADMINISTRATION_PERSONNELLE/00_A_TRAITER/ suivi de la valeur « origine » (5g)."],
+      ["5i","« Obtenir le fichier dans le dossier » : dossier iCloud Drive, chemin = le Texte (5h) ; désactive « Erreur si introuvable »."],
+      ["5j","« Si » : Fichier (5i) « a une valeur » → « Supprimer les fichiers » (Fichier 5i). Laisse « Confirmer avant de supprimer » activé pour les premiers essais. Fin du Si."],
       ["6","Après la boucle : action « Texte » laissée vide, puis « Copier dans le presse-papiers » (vide le presse-papiers : confidentialité)."],
       ["7","Action « Afficher la notification » : « Papiers rangés ✓ » (facultatif)."],
       ["8","Ici : ⚙️ Réglages → Papiers → choisis « Raccourci direct ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : choisis « Toujours autoriser »."]
     ])}</div>
-    <div class="hint">Le raccourci crée les dossiers manquants. S'il échoue, réponds « Pas rangés » dans Ma Maison : tes papiers restent validés, et tu peux passer au mode « Enregistrer dans Fichiers ».</div>
+    <div class="hint">Étapes 5g à 5j : l'original est supprimé seulement s'il se trouve dans ADMINISTRATION_PERSONNELLE › 00_A_TRAITER, et seulement après l'enregistrement de la copie. Il reste 30 jours dans « Supprimés récemment ». Le raccourci crée les dossiers manquants. S'il échoue, réponds « Pas rangés » dans Ma Maison : tes papiers restent validés, et tu peux passer au mode « Enregistrer dans Fichiers ».</div>
     <details style="margin-top:10px"><summary class="meta">Ancien raccourci « Ranger dans iCloud » (par le menu de partage)</summary>
       <div style="margin-top:6px">${steps([["1","Raccourci « Ranger dans iCloud », affiché dans la feuille de partage, types : Fichiers."],["2","« Obtenir le presse-papiers », puis « Enregistrer le fichier » (entrée du raccourci ; Demander où : non ; iCloud Drive ; Sous-chemin : Presse-papiers ; Écraser : non)."]])}</div></details>
     <div class="actions"><span class="spacer"></span><button class="btn" id="shOk">Compris</button></div>`,
