@@ -190,6 +190,23 @@ nav.tabs button{position:relative}
 .chkline input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 details.more{border:1px solid var(--line);border-radius:12px;padding:2px 12px 12px;margin-top:14px}
 details.more summary{padding:10px 0 4px;font-weight:600}
+/* Papiers : guide imprimable A4 */
+#printRoot{display:none}
+@media print{
+  @page{size:A4 portrait;margin:14mm}
+  body>*:not(#printRoot){display:none!important}
+  #printRoot{display:block;color:#19324A;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif}
+  #printRoot .pg{page-break-after:always;break-after:page;min-height:262mm;position:relative}
+  #printRoot .pgh{font-size:8pt;color:#586D7D;border-top:6mm solid #2265A3;padding-top:3mm;display:flex;justify-content:space-between;letter-spacing:.05em}
+  #printRoot h1{font-size:21pt;margin:8mm 0 6mm}
+  #printRoot h2{font-size:9pt;color:#2265A3;text-transform:uppercase;letter-spacing:.06em;margin:0 0 2mm}
+  #printRoot .box{background:#F3F7FB;border-radius:3mm;padding:5mm 7mm;margin-bottom:5mm}
+  #printRoot p{margin:1.5mm 0;font-size:10.5pt;line-height:1.45}
+  #printRoot p.big{font-size:13pt}
+  #printRoot .path{word-break:break-all;font-size:9.5pt}
+  #printRoot .cols{columns:2;column-gap:8mm}#printRoot .cols p{font-size:9pt;break-inside:avoid}
+  #printRoot .pgf{position:absolute;bottom:0;left:0;right:0;font-size:8pt;color:#586D7D;border-top:1px solid #DFE7EE;padding-top:2mm;display:flex;justify-content:space-between}
+}
 </style>
 </head>
 <body>
@@ -296,6 +313,20 @@ details.more summary{padding:10px 0 4px;font-weight:600}
       <div id="infosList" class="hidden"></div>
     </section>
 
+    <section id="tab-papers" class="hidden">
+      <div class="seg" id="papSeg" style="margin-top:0"><button data-v="classer" class="on">Classer</button><button data-v="registre">Registre</button><button data-v="plan">Plan</button></div>
+      <div id="pap-classer">
+        <div class="row2" style="margin-top:12px"><button class="btn" id="papPick">📄 Choisir des papiers</button><button class="btn ghost" id="papCam">📷 Photographier</button></div>
+        <input type="file" id="papFile" accept="application/pdf,image/*,.pdf,.txt" multiple class="hidden">
+        <input type="file" id="papCamFile" accept="image/*" capture="environment" class="hidden">
+        <div class="hint">PDF, scan ou photo : lu sur ton téléphone (rien n'est envoyé). Vérifie la proposition, puis « Ranger » : le fichier renommé part dans ton iCloud Drive. Ma Maison ne garde que la fiche du registre.</div>
+        <div class="list" id="pqList"></div>
+        <button class="btn ghost small hidden" id="pqClear" style="margin-top:10px">Vider la liste</button>
+      </div>
+      <div id="pap-registre" class="hidden"><div id="docsList"></div></div>
+      <div id="pap-plan" class="hidden"><div class="row2" id="planTools" style="margin-top:12px"></div><div id="planList"></div></div>
+    </section>
+
     <section id="tab-settings" class="hidden">
       <div class="stack">
         <div class="card setrow">
@@ -308,6 +339,15 @@ details.more summary{padding:10px 0 4px;font-weight:600}
           <strong>Catégories d'objets</strong>
           <div class="chips wrapchips" id="catsChips"></div>
           <button class="btn ghost small" data-addlist="cats">+ Ajouter une catégorie</button>
+        </div>
+        <div class="card setrow">
+          <strong>Papiers</strong>
+          <div class="hint">Comment ranger un papier dans iCloud Drive depuis cet appareil :</div>
+          <select class="field" id="papModeSel"><option value="fichiers">« Enregistrer dans Fichiers » (je choisis le dossier)</option><option value="raccourci">Raccourci « Ranger dans iCloud » (automatique)</option></select>
+          <button class="btn ghost" id="papShortcutHelp">Créer le raccourci « Ranger dans iCloud »</button>
+          <div class="hint">Reprendre ton plan DocClass (Mac) une fois : fichier exporté par DocClass V2.5.2.</div>
+          <button class="btn ghost" id="papImportBtn">Importer un plan DocClass (JSON)</button>
+          <input type="file" id="papImportFile" accept="application/json,.json" class="hidden">
         </div>
         <div class="card setrow">
           <strong>Synchronisation</strong>
@@ -343,11 +383,15 @@ details.more summary{padding:10px 0 4px;font-weight:600}
     <button data-tab="places"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Lieux</button>
     <button data-tab="gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Galerie</button>
     <button data-tab="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Courses</button>
+    <button data-tab="papers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Papiers</button>
     <button data-tab="infos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M12 16v-3M12 10h.01"/></svg>Maison<span class="badge hidden" id="homeBadge"></span></button>
   </div></nav>
 </div>
 
 <div id="modalRoot"></div>
+<div id="printRoot"></div>
+<script src="papiers-moteur.js"></script>
+<script src="papiers.js"></script>
 <datalist id="infoCatsDL"></datalist>
 <datalist id="prodDL"></datalist>
 
@@ -432,7 +476,7 @@ async function ghDeleteFile(c, token, path){
 }
 
 /* ================= DONNÉES ================= */
-const KEYS = ["items","infos","places","rooms","cats","products","receipts","shopping","tasks"];
+const KEYS = ["items","infos","places","rooms","cats","products","receipts","shopping","tasks","plan","docs","docrules","papmeta"];
 let S = { pw:null, token:null, cfg:null, data:null, dirty:false };
 function emptyData(){ const d={v:2}; for(const k of KEYS) d[k]=[]; return d; }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -458,6 +502,7 @@ function seedDefaults(){
   for(const k of KEYS) d[k] ||= [];
   if(!d.rooms.length){ for(const r of DEFAULT_ROOMS) d.rooms.push({id:"r:"+placeKey(r), name:r, updatedAt:1}); n++; }
   if(!d.cats.length){ for(const [c,i] of DEFAULT_CATS) d.cats.push({id:"c:"+placeKey(c), name:c, icon:i, updatedAt:1}); n++; }
+  n += seedPlan();   // plan de classement DocClass par défaut (classeurs A–E)
   // pièces saisies à la main avant cette version
   const names = new Set(live(d.rooms).map(r=>norm(r.name)));
   for(const p of live(d.places)) if(p.room && !names.has(norm(p.room))){ d.rooms.push({id:"r:"+placeKey(p.room), name:p.room, updatedAt:now}); names.add(norm(p.room)); n++; }
@@ -729,8 +774,8 @@ const phHTML = (it, cls="") => `<div class="ph ${cls}" data-emoji="${esc(catIcon
 
 /* ================= INTERFACE ================= */
 let tab="items", placeIndex=new Map(), galCat="", courseFilter="all", shopView="list", homeView="tasks";
-const TITLES = {items:"Rangement", places:"Lieux", gallery:"Galerie", courses:"Courses", infos:"Maison", settings:"Réglages"};
-const PH = {items:"Rechercher un objet, un rangement…", places:"Rechercher un rangement ou une pièce…", gallery:"Rechercher un objet…", courses:"Rechercher un article acheté…", infos:"Rechercher une info (ex. poubelle)…"};
+const TITLES = {items:"Rangement", places:"Lieux", gallery:"Galerie", courses:"Courses", papers:"Papiers", infos:"Maison", settings:"Réglages"};
+const PH = {items:"Rechercher un objet, un rangement…", places:"Rechercher un rangement ou une pièce…", gallery:"Rechercher un objet…", courses:"Rechercher un article acheté…", infos:"Rechercher une info (ex. poubelle)…", papers:"Où est ce papier ? (ex. carte grise)"};
 function startApp(){
   if(seedDefaults() + normalizeLocations()) touch();
   show("appView"); lastAct=Date.now(); setTab(tab); setSync(S.dirty?"busy":"ok", "");
@@ -743,9 +788,9 @@ function setTab(t){
   $("gearBtn").classList.toggle("on", t==="settings");
   for(const k of Object.keys(TITLES)) $("tab-"+k).classList.toggle("hidden", k!==t);
   $("title").textContent = TITLES[t];
-  $("fab").classList.toggle("hidden", t==="settings");
-  const fabIcon = {items:"item", gallery:"item", places:"place", courses:"cart", infos:"info"}[t];
-  const fabLabel = {items:"Ajouter un objet", gallery:"Ajouter un objet", places:"Ajouter un rangement", courses:"Ajouter un achat", infos:"Ajouter une info"}[t];
+  $("fab").classList.toggle("hidden", t==="settings" || (t==="papers" && papView==="classer"));
+  const fabIcon = {items:"item", gallery:"item", places:"place", courses:"cart", infos:"info", papers:"paper"}[t];
+  const fabLabel = {items:"Ajouter un objet", gallery:"Ajouter un objet", places:"Ajouter un rangement", courses:"Ajouter un achat", infos:"Ajouter une info", papers:papView==="plan"?"Nouvelle rubrique":"Ajouter un papier déjà rangé"}[t];
   if(fabIcon){ $("fab").innerHTML = ICONS.plus; $("fab").setAttribute("aria-label", fabLabel); $("fab").title = fabLabel; }
   $("q").parentElement.classList.toggle("hidden", t==="settings");
   $("q").placeholder = t==="courses" ? (shopView==="list"?"Rechercher dans la liste…":"Rechercher un article acheté…") : t==="infos" ? (homeView==="tasks"?"Rechercher une tâche…":"Rechercher une info (ex. poubelle)…") : (PH[t]||"Rechercher…");
@@ -822,8 +867,9 @@ function render(){
   if(tab==="items"){
     $("alertsBox").innerHTML = q ? "" : alertsHTML(al);
     const list = items.filter(i=>matches(q, itemHay(i))).sort((a,b)=> q ? byName(a,b) : (b.updatedAt||0)-(a.updatedAt||0));
-    $("itemsList").innerHTML = list.length ? list.map(itemCard).join("")
-      : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`;
+    const papBlock = papSearchBlock(q);
+    $("itemsList").innerHTML = (list.length ? list.map(itemCard).join("")
+      : papBlock ? "" : `<div class="empty">${q?"Aucun objet trouvé pour « "+esc(q)+" ».":"Aucun objet pour l'instant.<br>Ajoute ton premier objet ci-dessus,<br>ou crée d'abord tes rangements dans l'onglet Lieux."}</div>`) + papBlock;
     hydratePhotos($("itemsList"));
   }
 
@@ -928,6 +974,8 @@ function render(){
       : `<div class="empty">${q?"Aucune info trouvée.":"Aucune info pour l'instant.<br>Ex : « Poubelle cuisine » → « Sacs de 20 L »."}</div>`;
   }
 
+  if(tab==="papers") renderPapiers(q);
+
   if(tab==="settings"){
     $("remToggle").checked = isRemembered();
     $("roomsChips").innerHTML = live(S.data.rooms).sort(byName).map(r=>`<button class="chip" data-listedit="rooms:${esc(r.id)}">${esc(r.name)}</button>`).join("");
@@ -987,7 +1035,8 @@ const ICONS = {
   task:  SV('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
   tag:   SV('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>'),
   help:  SV('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
-  image: SV('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>')
+  image: SV('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>'),
+  paper: SV('<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')
 };
 function sheetHead(icon, kind, title, alt){
   return `<div class="shead"><span class="sicon${alt?" alt":""}">${ICONS[icon]}</span><div><div class="skind${alt?" alt":""}">${esc(kind)}</div><h2>${title}</h2></div></div>`;
@@ -1521,6 +1570,7 @@ function getAlerts(){
       else { const d=-daysUntil(i.loan.date); if(d>=30) out.push({kind:"item", id:i.id, lv:"soon", icon:"🤝", text:`${i.name} prêté à ${i.loan.to}`, sub:`Depuis ${d} jours`}); }
     }
   }
+  out.push(...docAlerts());
   const n = live(S.data.shopping).filter(x=>!x.done).length;
   if(n) out.push({kind:"shop", id:"", lv:"ok", icon:"🛒", text:`${n} article${n>1?"s":""} à acheter`, sub:"Voir la liste de courses"});
   const rank={late:0,soon:1,ok:2};
@@ -1898,7 +1948,7 @@ const HELP = {
     ["✍️","Tape ou dicte « tente dans armoire terrasse » puis OK : l'objet est rangé, ou déplacé s'il existe déjà."],
     ["➕","Le bouton + ouvre la fiche complète : photo, catégorie, prêt, garantie, péremption, contenant."],
     ["⚠️","« À surveiller » liste ce qui demande ton attention : retards, garanties, péremptions, prêts, courses."],
-    ["🔍","La recherche trouve un objet, un rangement ou une pièce. Appuie sur un objet pour sa fiche."]]],
+    ["🔍","La recherche trouve un objet, un rangement ou une pièce, et aussi tes papiers (ex. « carte grise »)."]]],
   places: ["Tes pièces et rangements", [
     ["🏠","Organisation : pièce › rangement › sous-rangement (armoire › carton › boîte)."],
     ["➕","+ crée un rangement. Dans un rangement, « + Rangement » en crée un dedans, « + Objet » y range un objet."],
@@ -1913,6 +1963,12 @@ const HELP = {
     ["🧾","Mes achats : « Scanner un ticket », vérifie la liste lue, puis enregistre."],
     ["🔗","Après un achat, l'app te propose des rapprochements (liste, objets à racheter) : tu valides ou non."],
     ["✅","« Il en reste / Fini » : pour savoir en magasin s'il faut racheter. La recherche montre la date du dernier achat."]]],
+  papers: ["Classer tes papiers (DocClass)", [
+    ["📄","Classer : choisis un PDF, un scan ou photographie un papier. Il est lu sur ton téléphone (OCR), rien n'est envoyé."],
+    ["✅","Appuie sur un document : vérifie rubrique, sous-dossier, date et nom (score et raisons affichés), puis « Ranger… »."],
+    ["☁️","« Ranger » remet le fichier renommé à iOS : raccourci « Ranger dans iCloud » ou « Enregistrer dans Fichiers ». L'original n'est jamais supprimé."],
+    ["🗂️","Registre : la liste de tes papiers rangés (sans leur contenu), avec les échéances dans « À surveiller »."],
+    ["📚","Plan : classeurs A à E, rubriques et dossiers iCloud ; modifie-les, gère les règles mémorisées, imprime le guide A4."]]],
   infos: ["Entretien et infos de la maison", [
     ["🧰","Entretien : tâches récurrentes (filtres de clim…). « ✓ Fait » calcule la prochaine date."],
     ["🔔","« M'avertir » (dans une tâche) ajoute un rappel répété dans ton Calendrier."],
@@ -2004,8 +2060,9 @@ $("gearBtn").onclick=()=>setTab(tab==="settings"?"items":"settings");
 $("q").addEventListener("input", render);
 $("quickBtn").onclick=quickAdd;
 $("quickIn").addEventListener("keydown", e=>{ if(e.key==="Enter") quickAdd(); });
-$("fab").onclick=()=> tab==="infos" ? (homeView==="tasks" ? openTask() : openInfo()) : tab==="places" ? openPlace() : tab==="courses" ? (shopView==="list" ? $("shopIn").focus() : openManualPurchase()) : openItem();
+$("fab").onclick=()=> tab==="papers" ? (papView==="plan" ? openNewRubrique() : openDoc(null)) : tab==="infos" ? (homeView==="tasks" ? openTask() : openInfo()) : tab==="places" ? openPlace() : tab==="courses" ? (shopView==="list" ? $("shopIn").focus() : openManualPurchase()) : openItem();
 $("scanQrBtn").onclick=openQrScan;
+initPapiers();
 $("shopAdd").onclick=shopAddFromInput;
 $("shopIn").addEventListener("keydown", e=>{ if(e.key==="Enter") shopAddFromInput(); });
 $("shopClear").onclick=()=>{ const now=Date.now(); for(const x of live(S.data.shopping)) if(x.done){ x.deleted=true; x.updatedAt=now; } touch(); render(); };
@@ -2030,6 +2087,7 @@ document.addEventListener("click", e=>{
   if(el=t.closest("[data-alert]")){ const [k,id]=el.dataset.alert.split(/:(.*)/);
     if(k==="task"){ const x=S.data.tasks.find(y=>y.id===id); if(x) openTask(x); }
     else if(k==="shop"){ shopView="list"; $("q").value=""; setTab("courses"); }
+    else if(k==="doc"){ const x=live(S.data.docs).find(y=>y.id===id); if(x) openDoc(x); }
     else { const i=S.data.items.find(y=>y.id===id); if(i) openDetail(i); }
     return; }
   if(el=t.closest("[data-done]")){ const x=S.data.tasks.find(y=>y.id===el.dataset.done); if(x) markTaskDone(x); return; }
@@ -2053,7 +2111,7 @@ if("serviceWorker" in navigator){
     document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") reg.update().catch(()=>{}); });
   }).catch(()=>{});
   let reloaded=false;
-  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!reloaded && !S.dirty && !busyLong){ reloaded=true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!reloaded && !S.dirty && !busyLong && !papPending()){ reloaded=true; location.reload(); } });
 }
 boot();
 </script>

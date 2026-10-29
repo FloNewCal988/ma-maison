@@ -13,12 +13,17 @@ Petite application personnelle (iPhone + ordinateur) pour :
 - **Étiquettes QR** : Lieux → appuie sur un rangement → 🏷️ QR, imprime et colle ; « Scanner une étiquette » affiche le contenu.
 - **🔔 M'avertir** : ajoute un rappel au Calendrier de l'iPhone (garantie, péremption, entretien récurrent).
 - **Infos maison** : un pense-bête de la maison (« Poubelle cuisine → sacs de 20 L »).
+- **Papiers** (DocClass intégré) : classe tes papiers administratifs dans iCloud Drive et dans tes classeurs A à E.
+  - **Classer** : choisis un PDF, un scan ou photographie un papier. Il est lu **sur le téléphone** (texte du PDF, sinon OCR) : organisme, type, date d'émission, échéance, rubrique et sous-dossier proposés, avec un score expliqué. Tu vérifies et corriges, puis « Ranger » remet le fichier renommé à iOS : raccourci « Ranger dans iCloud » (automatique) ou « Enregistrer dans Fichiers ». L'original n'est jamais modifié ni supprimé.
+  - **Registre** : la fiche de chaque papier rangé (nom, date, rubrique, emplacement, échéance) — jamais le document ni son contenu. Les échéances apparaissent dans « À surveiller ».
+  - **Plan** : classeurs, intercalaires, codes (ex. `A-03.04`) et dossiers iCloud, modifiables ; règles mémorisées (activables/désactivables) ; guide A4 imprimable, avec réimpression des seules fiches modifiées.
 
 ## 🔒 Sécurité
 
 - L'**application** (le code) est publique sur GitHub Pages : elle ne contient aucune donnée.
 - Tes **données** sont dans un **dépôt privé** séparé, dans un fichier `data.enc.json`.
 - Les **photos** sont chiffrées de la même façon, dans le dossier `photos/` du dépôt privé.
+- **Papiers administratifs** : les documents ne passent jamais par GitHub ; ils restent dans ton iCloud Drive. Seuls le plan, les règles et le registre (sans contenu) sont enregistrés, chiffrés comme le reste.
 - Ce fichier est **chiffré avec ton mot de passe** (AES-256-GCM, clé dérivée par PBKDF2-SHA256, 310 000 itérations) **sur ton téléphone, avant l'envoi**. Même si quelqu'un accédait au dépôt, il ne verrait qu'un bloc illisible.
 - Ton mot de passe n'est **jamais envoyé ni stocké**. Le jeton GitHub est stocké sur l'appareil, lui aussi chiffré avec ton mot de passe.
 - **Rester connecté sur cet appareil** (coché par défaut) : le mot de passe est chiffré avec une clé propre à ce téléphone, générée par le navigateur et impossible à extraire. Ouvrir le lien depuis un autre appareil redemande toujours le mot de passe. Le bouton 🔒 déconnecte l'appareil.
@@ -32,7 +37,7 @@ Petite application personnelle (iPhone + ordinateur) pour :
 ### 1. Dépôt de l'application (public)
 
 1. Sur github.com → **New repository** → nom : `ma-maison` → **Public** → *Create*.
-2. *Add file → Upload files* → dépose les 7 fichiers : `index.html`, `sw.js`, `manifest.webmanifest`, `icon-180.png`, `icon-192.png`, `icon-512.png`, `README.md` → *Commit*.
+2. *Add file → Upload files* → dépose les 9 fichiers : `index.html`, `papiers.js`, `papiers-moteur.js`, `sw.js`, `manifest.webmanifest`, `icon-180.png`, `icon-192.png`, `icon-512.png`, `README.md` → *Commit*.
 3. *Settings → Pages* → Source : **Deploy from a branch** → Branch : `main` / `(root)` → *Save*.
 4. Après 1–2 minutes, l'app est en ligne sur : `https://TON-PSEUDO.github.io/ma-maison/`
 
