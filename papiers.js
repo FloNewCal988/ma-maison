@@ -7,7 +7,10 @@
 "use strict";
 const PDFJS_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/";
 const PAP_ROOT = "ADMINISTRATION_PERSONNELLE";
-const LS_PAPMODE = "mm_pap_mode";              // "raccourci" | "fichiers" (réglage propre à l'appareil)
+const LS_PAPMODE = "mm_pap_mode";              // "direct" | "raccourci" | "fichiers" (réglage propre à l'appareil)
+const DIRECT_SHORTCUT = "Ranger mes papiers";   // raccourci du mode direct (sans menu de partage)
+const DIRECT_CHUNK = 12e6;                      // taille max. d'un envoi par le presse-papiers (caractères base64)
+let pendingSend = null, leavingForShortcut = false;
 let papView = "classer";
 const PQ = [];                                  // file d'analyse : en mémoire seulement (comme DocClass)
 let pqBusy = false, ocrWorker = null, pdfP = null;
@@ -112,6 +115,7 @@ async function runQueue(){
 }
 /* documents encore à ranger : la mise à jour automatique de l'app attend (sinon la liste serait perdue) */
 const papPending = () => PQ.some(x=>x.status!=="rangé");
+const validated = () => PQ.filter(x=>x.status==="validé");
 function pqRemove(q){ const i=PQ.indexOf(q); if(i>=0) PQ.splice(i,1); render(); }
 
 /* ---------- rendu ---------- */
@@ -134,12 +138,15 @@ function renderQueue(q){
   const list = PQ.filter(x=>!q || matches(q, x.file.name, x.prop?.ref||"", x.prop?.org||""));
   $("pqList").innerHTML = list.length ? list.map(x=>{
     const p=x.prop, rub=p&&p.ref?planRub(p.ref):null;
+    if(x.status==="validé") return papCard(`data-pq="${x.qid}"`, x.final.name, "→ "+paperPlace(x.final.ref, x.final.parts), x.b64?"Prêt pour le rangement automatique":"Préparation…", `<span class="pill">Validé ✓</span>`);
     const title = x.status==="rangé" ? "✓ "+x.savedName : x.file.name;   // ici le nom de fichier reste utile
     const where = x.status==="rangé" ? paperPlace(x.savedRef, x.savedParts) : rub ? `→ ${rub.ref} ${rub.name}${p.parts.length?" › "+folderLabel(p.parts):""}` : (x.status==="prêt"||x.status==="erreur") ? "→ rubrique à choisir" : "";
     const meta = x.status==="analyse"||x.status==="attente" ? x.step : x.status==="erreur" ? "⚠️ "+x.step : x.status==="rangé" ? "Rangé · l'original reste à sa place" : `${p.date?"Date : "+p.date:"Date à confirmer"} · ${x.method||""}`;
     const pills = x.status==="prêt"||x.status==="erreur" ? scorePill(p.score)+(p.kind!=="Non déterminé"?`<span class="pill">${esc(p.kind)}</span>`:"") : x.status==="rangé" ? `<span class="pill">Rangé</span>` : `<span class="pill warn">${x.status==="analyse"?"Lecture…":"En attente"}</span>`;
     return papCard(`data-pq="${x.qid}"`, title, where, meta, pills);
   }).join("") : `<div class="empty">${q?"Aucun document dans la liste pour cette recherche.":"Choisis un ou plusieurs papiers (PDF, scan ou photo).<br>Ils sont lus sur ton téléphone, puis tu vérifies<br>la proposition avant de les ranger."}</div>`;
+  const nv=validated().length;
+  if(nv && papMode()==="direct") $("pqList").insertAdjacentHTML("afterbegin", `<button class="btn block" data-pqsend="1">☁️ Ranger ${nv>1?"les "+nv+" papiers validés":"le papier validé"} dans iCloud</button>`);
   const done=PQ.filter(x=>x.status==="rangé").length;
   $("pqClear").classList.toggle("hidden", !PQ.length);
   $("pqClear").textContent = done && done<PQ.length ? `Retirer les ${done} document(s) rangé(s)` : "Vider la liste";
@@ -237,10 +244,10 @@ function openPQ(x){
     <input class="field hidden" id="qDateOther" type="date" style="margin-top:6px">
     <label>Nom du fichier rangé</label><input class="field" id="qName" value="${esc(p.filename)}" autocomplete="off">
     <label>Échéance à surveiller (facultatif)</label><input class="field" id="qDue" type="date" value="${esc(p.due||"")}">
-    <label>Note (facultatif)</label><input class="field" id="qNotes" placeholder="ex. payé par prélèvement" autocomplete="off">
+    <label>Note (facultatif)</label><input class="field" id="qNotes" value="${esc(p.notes||"")}" placeholder="ex. payé par prélèvement" autocomplete="off">
     <label>Destination</label><div class="card" style="padding:10px 12px"><div id="qPlace" style="font-weight:600"></div><div class="meta" id="qPath" style="word-break:break-all"></div><div class="err" id="qErr"></div></div>
-    <div class="hint">${papMode()==="raccourci"?"« Ranger » copie la destination puis ouvre le partage : choisis le raccourci « Ranger dans iCloud ».":"« Ranger » ouvre le partage : choisis « Enregistrer dans Fichiers », puis le dossier indiqué ci-dessus."} Le document d'origine n'est ni modifié ni supprimé.</div>
-    <div class="actions"><button class="btn danger" id="qDel">Retirer</button><button class="btn ghost" id="qRule">Règle…</button><span class="spacer"></span><button class="btn" id="qGo">Ranger…</button></div>`,
+    <div class="hint">${papMode()==="direct"?"« Valider » met ce papier dans le lot. Ensuite, « Ranger … dans iCloud » les range tous d'un coup avec le raccourci « "+DIRECT_SHORTCUT+" ».":papMode()==="raccourci"?"« Ranger » copie la destination puis ouvre le partage : choisis le raccourci « Ranger dans iCloud ».":"« Ranger » ouvre le partage : choisis « Enregistrer dans Fichiers », puis le dossier indiqué ci-dessus."} Le document d'origine n'est ni modifié ni supprimé.</div>
+    <div class="actions"><button class="btn danger" id="qDel">Retirer</button><button class="btn ghost" id="qRule">Règle…</button><span class="spacer"></span><button class="btn" id="qGo">${papMode()==="direct"?"Valider":"Ranger…"}</button></div>`,
   (bd, close)=>{
     const g=id=>bd.querySelector(id);
     let lastAuto=p.filename;
@@ -248,7 +255,8 @@ function openPQ(x){
     const cur=()=>({ref:g("#qRef").value, parts:partsOf(g("#qFol").value), name:g("#qName").value.trim(), date:dateVal()});
     const update=()=>{
       const c=cur();
-      if(g("#qName").value===lastAuto){ lastAuto=DC.suggestName(stem, ext, c.date); g("#qName").value=lastAuto; c.name=lastAuto; }
+      // nom généré non retouché : seule la date change (le nom descriptif proposé par le moteur est conservé)
+      if(g("#qName").value===lastAuto){ const core=DC.splitName(lastAuto)[0].replace(/^\d{4}-\d{2}-\d{2}_?/,"")||stem; lastAuto=DC.suggestName(core, ext, c.date); g("#qName").value=lastAuto; c.name=lastAuto; }
       g("#qPlace").textContent=paperPlace(c.ref,c.parts);
       g("#qPath").textContent=c.ref?planPathOf(c.ref,c.parts,c.name||"…"):"";
       const clash=c.ref && docsLive().some(d=>d.path===planPathOf(c.ref,c.parts,c.name));
@@ -264,18 +272,85 @@ function openPQ(x){
     g("#qGo").onclick=()=>{
       const c=cur(); update(); if(g("#qGo").disabled) return;
       const path=planPathOf(c.ref,c.parts,c.name);
+      if(papMode()==="direct"){
+        // les choix sont gardés dans la proposition : rouvrir le papier les retrouve
+        Object.assign(p,{ref:c.ref, parts:c.parts, filename:c.name, date:c.date, due:g("#qDue").value, notes:g("#qNotes").value.trim()});
+        if(c.date && !p.dateOptions.some(o=>o.date===c.date)) p.dateOptions.push({date:c.date, label:"Date saisie", confidence:0});
+        x.final={...c, path, due:g("#qDue").value, notes:g("#qNotes").value.trim()};
+        x.status="validé"; x.b64=null;
+        fileToBase64(x.file).then(b=>{ x.b64=b; render(); }).catch(e=>{ x.status="prêt"; toast("Lecture du fichier impossible : "+e.message); render(); });
+        close(); render(); toast("Validé ✓ Range le lot quand tu as fini");
+        return;
+      }
       const file=new File([x.file], c.name, {type:x.file.type||"application/octet-stream"});
       const finish=()=>{
-        const now=Date.now(), id=uid();
-        S.data.docs.push({id, name:c.name, title:x.file.name, ref:c.ref, parts:c.parts, path, date:c.date, due:g("#qDue").value, dueDone:false,
-          kind:p.kind, org:p.org, notes:g("#qNotes").value.trim(), savedAt:now, updatedAt:now});
-        Object.assign(x,{status:"rangé", docId:id, savedName:c.name, savedRef:c.ref, savedParts:c.parts});
+        registerDoc(x, {...c, path, due:g("#qDue").value, notes:g("#qNotes").value.trim()});
         touch(); close(); render(); toast("Rangé ✓ Ajouté au registre");
       };
       shareOrDownload(file, path, finish);
     };
   });
 }
+function registerDoc(x, f){
+  const now=Date.now(), id=uid();
+  S.data.docs.push({id, name:f.name, title:x.file.name, ref:f.ref, parts:f.parts, path:f.path, date:f.date, due:f.due||"", dueDone:false,
+    kind:x.prop.kind, org:x.prop.org, notes:f.notes||"", savedAt:now, updatedAt:now});
+  Object.assign(x,{status:"rangé", docId:id, savedName:f.name, savedRef:f.ref, savedParts:f.parts, b64:null});
+}
+function fileToBase64(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>rej(r.error||new Error("lecture")); r.readAsDataURL(file); });
+}
+
+/* ---------- mode « Raccourci direct » : un appui range tout le lot ----------
+   Le contenu passe par le presse-papiers (sur l'appareil) ; le raccourci le vide à la fin. */
+function nextChunk(){
+  const out=[]; let size=0;
+  for(const x of validated()){
+    if(!x.b64) continue;
+    if(out.length && size+x.b64.length>DIRECT_CHUNK) break;
+    out.push(x); size+=x.b64.length;
+  }
+  return out;
+}
+function launchShortcut(){
+  leavingForShortcut=true; setTimeout(()=>{ leavingForShortcut=false; }, 4000);
+  location.href = "shortcuts://run-shortcut?name="+encodeURIComponent(DIRECT_SHORTCUT)+"&input=clipboard";
+}
+function sendBatch(){
+  if(validated().some(x=>!x.b64)) return toast("Préparation des fichiers en cours, réessaie dans un instant.");
+  const chunk=nextChunk(); if(!chunk.length) return;
+  const payload=JSON.stringify({app:"Ma Maison", version:1, fichiers:chunk.map(x=>({nom:x.final.name, chemin:x.final.path, donnees:x.b64}))});
+  const rest=validated().length-chunk.length;
+  let write;
+  try{ write=navigator.clipboard.writeText(payload); }catch(e){ write=Promise.reject(e); }   // dans le geste de l'utilisateur
+  pendingSend={ids:chunk.map(x=>x.qid), at:Date.now()};
+  write.then(()=>{ openPendingSend(rest); launchShortcut(); })
+       .catch(e=>{ pendingSend=null; toast("Copie impossible ("+(e&&e.message||"presse-papiers")+"). Utilise le mode « Enregistrer dans Fichiers » dans les Réglages."); });
+}
+function openPendingSend(rest){
+  if(!pendingSend) return;
+  const items=pendingSend.ids.map(id=>PQ.find(x=>x.qid===id)).filter(Boolean);
+  modal(`${sheetHead("paper","Rangement automatique", `${plural(items.length,"papier")} envoyé${items.length>1?"s":""} au raccourci`)}
+    <div class="hint">Le raccourci « ${esc(DIRECT_SHORTCUT)} » s'ouvre et range les fichiers. Reviens ensuite ici (« ◀ » en haut à gauche) et confirme.</div>
+    <div class="card" style="padding:2px 12px;margin-top:10px">${items.map(x=>`<div class="sub" style="cursor:default"><div style="min-width:0"><div class="name">${esc(x.final.name)}</div><div class="meta" style="margin:0;word-break:break-all">${esc(x.final.path.split("/").slice(0,-1).join("/"))}</div></div></div>`).join("")}</div>
+    ${rest?`<div class="hint">Encore ${plural(rest,"papier")} à envoyer ensuite (lot découpé pour ne pas surcharger le presse-papiers).</div>`:""}
+    <div class="hint">Vérifie la notification du raccourci, ou le dossier dans l'app Fichiers.</div>
+    <div class="actions"><button class="btn ghost" id="psRetry">Relancer le raccourci</button><span class="spacer"></span>
+      <button class="btn ghost" id="psNo">Pas rangés</button><button class="btn" id="psYes">Oui, c'est rangé</button></div>`,
+  (bd, close)=>{
+    bd.dataset.busy="1";   // pas de fermeture par appui à côté : il faut répondre
+    bd.querySelector("#psRetry").onclick=()=>launchShortcut();
+    bd.querySelector("#psNo").onclick=()=>{ pendingSend=null; close(); render(); toast("Rien n'est inscrit au registre ; les papiers restent validés."); };
+    bd.querySelector("#psYes").onclick=()=>{
+      for(const x of items) if(x.status==="validé") registerDoc(x, x.final);
+      pendingSend=null;
+      try{ navigator.clipboard.writeText("").catch(()=>{}); }catch(e){}   // par sécurité, en plus du raccourci
+      touch(); close(); render();
+      toast(validated().length?`Rangé ✓ Encore ${validated().length} à ranger`:"Rangé ✓ Ajouté au registre");
+    };
+  });
+}
+
 /* Remise du fichier à iOS. Aucun appel bloquant avant navigator.share : Safari exige le geste de l'utilisateur. */
 function shareOrDownload(file, path, onDone){
   if(papMode()==="raccourci"){ try{ navigator.clipboard.writeText(path).catch(()=>{}); }catch(e){} }
@@ -496,20 +571,30 @@ function importDocClassPlan(file){
   r.readAsText(file);
 }
 
-/* ---------- aide au raccourci iPhone ---------- */
+/* ---------- aide aux raccourcis iPhone ---------- */
 function openShortcutHelp(){
-  modal(`${sheetHead("help","Une seule fois","Raccourci « Ranger dans iCloud »")}
-    <div class="hint">Il dépose le papier dans le bon dossier iCloud, sans naviguer dans Fichiers. Ma Maison copie la destination juste avant d'ouvrir le partage ; le raccourci la lit.</div>
-    <div style="margin-top:8px">${[
-      ["1","App Raccourcis → + (nouveau raccourci) → nomme-le « Ranger dans iCloud »."],
-      ["2","Touche ⓘ (Détails) → active « Afficher dans la feuille de partage » → types acceptés : Fichiers seulement (décoche le reste)."],
-      ["3","Ajoute l'action « Obtenir le presse-papiers »."],
-      ["4","Ajoute l'action « Enregistrer le fichier » : entrée = « Entrée du raccourci ». Touche ›, désactive « Demander où enregistrer », Destination = iCloud Drive (dossier racine), Sous-chemin = la variable « Presse-papiers »."],
-      ["5","Laisse « Écraser si le fichier existe » DÉSACTIVÉ : un fichier existant n'est jamais remplacé."],
-      ["6","Ajoute l'action « Afficher la notification » avec le texte « Rangé ✓ » (facultatif)."],
-      ["7","Ici : Réglages ⚙️ → Papiers → choisis « Raccourci ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : accepte."]
-    ].map(([n,t])=>`<div class="helprow"><span class="hi">${n}</span><span>${esc(t)}</span></div>`).join("")}</div>
-    <div class="hint">Si le raccourci échoue, choisis simplement « Enregistrer dans Fichiers » dans le même menu de partage.</div>
+  const steps=(rows)=>rows.map(([n,t])=>`<div class="helprow"><span class="hi">${n}</span><span>${esc(t)}</span></div>`).join("");
+  modal(`${sheetHead("help","Une seule fois",`Raccourci « ${esc(DIRECT_SHORTCUT)} »`)}
+    <div class="hint">Mode « Raccourci direct » : tu valides tes papiers, un appui et ils sont rangés dans iCloud Drive, sans menu de partage. Ma Maison passe les fichiers au raccourci par le presse-papiers ; le raccourci le vide à la fin.</div>
+    <div style="margin-top:8px">${steps([
+      ["1",`App Raccourcis → + → nomme-le exactement « ${DIRECT_SHORTCUT} ».`],
+      ["2","Action « Obtenir le presse-papiers »."],
+      ["3","Action « Obtenir le dictionnaire à partir de l'entrée » (entrée : Presse-papiers)."],
+      ["4","Action « Obtenir la valeur du dictionnaire » : Valeur pour la clé « fichiers »."],
+      ["5","Action « Répéter avec chaque élément » (sur la Valeur du dictionnaire de l'étape 4). Dans la boucle :"],
+      ["5a","« Obtenir la valeur du dictionnaire » : clé « donnees », dans « Élément répété »."],
+      ["5b","« Encoder en base64 » sur cette valeur, puis touche › et choisis « Décoder »."],
+      ["5c","« Obtenir la valeur du dictionnaire » : clé « nom », dans « Élément répété »."],
+      ["5d","« Définir le nom » : renomme le résultat base64 (5b) avec la valeur « nom » (5c)."],
+      ["5e","« Obtenir la valeur du dictionnaire » : clé « chemin », dans « Élément répété »."],
+      ["5f","« Enregistrer le fichier » : le fichier renommé (5d) ; touche ›, désactive « Demander où enregistrer », Destination = iCloud Drive, Sous-chemin = la valeur « chemin » (5e), « Écraser si le fichier existe » DÉSACTIVÉ."],
+      ["6","Après la boucle : action « Texte » laissée vide, puis « Copier dans le presse-papiers » (vide le presse-papiers : confidentialité)."],
+      ["7","Action « Afficher la notification » : « Papiers rangés ✓ » (facultatif)."],
+      ["8","Ici : ⚙️ Réglages → Papiers → « Raccourci direct ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : choisis « Toujours autoriser »."]
+    ])}</div>
+    <div class="hint">Le raccourci crée les dossiers manquants. S'il échoue, réponds « Pas rangés » dans Ma Maison : tes papiers restent validés, et tu peux passer au mode « Enregistrer dans Fichiers ».</div>
+    <details style="margin-top:10px"><summary class="meta">Ancien raccourci « Ranger dans iCloud » (par le menu de partage)</summary>
+      <div style="margin-top:6px">${steps([["1","Raccourci « Ranger dans iCloud », affiché dans la feuille de partage, types : Fichiers."],["2","« Obtenir le presse-papiers », puis « Enregistrer le fichier » (entrée du raccourci ; Demander où : non ; iCloud Drive ; Sous-chemin : Presse-papiers ; Écraser : non)."]])}</div></details>
     <div class="actions"><span class="spacer"></span><button class="btn" id="shOk">Compris</button></div>`,
   (bd, close)=>{ bd.querySelector("#shOk").onclick=close; });
 }
@@ -525,17 +610,21 @@ function initPapiers(){
     render(); };
   document.querySelectorAll("#papSeg button").forEach(b=>b.onclick=()=>{ papView=b.dataset.v; $("q").value=""; setTab("papers"); });
   $("papModeSel").value=papMode();
-  $("papModeSel").onchange=e=>{ try{ localStorage.setItem(LS_PAPMODE, e.target.value); }catch(_){} toast(e.target.value==="raccourci"?"Rangement par le raccourci « Ranger dans iCloud »":"Rangement par « Enregistrer dans Fichiers »"); };
+  $("papModeSel").onchange=e=>{ try{ localStorage.setItem(LS_PAPMODE, e.target.value); }catch(_){}
+    toast(e.target.value==="direct"?`Rangement automatique par le raccourci « ${DIRECT_SHORTCUT} »`:e.target.value==="raccourci"?"Rangement par le raccourci « Ranger dans iCloud »":"Rangement par « Enregistrer dans Fichiers »");
+    if(e.target.value!=="direct") for(const x of validated()){ x.status="prêt"; x.b64=null; }
+    render(); };
   $("papShortcutHelp").onclick=openShortcutHelp;
   $("papImportBtn").onclick=()=>$("papImportFile").click();
   $("papImportFile").onchange=e=>{ if(e.target.files[0]) importDocClassPlan(e.target.files[0]); e.target.value=""; };
   document.addEventListener("click", e=>{
     if(!S.data || e.target.closest("#modalRoot")) return;
     let el;
+    if(el=e.target.closest("[data-pqsend]")) return sendBatch();
     if(el=e.target.closest("[data-pq]")) return openPQ(PQ.find(x=>x.qid===el.dataset.pq));
     if(el=e.target.closest("[data-doc]")) return openDoc(docsLive().find(x=>x.id===el.dataset.doc));
     if(el=e.target.closest("[data-plan]")) return openPlan(planLive().find(x=>x.id===el.dataset.plan));
     if(el=e.target.closest("[data-papsearch]")){ const q=$("q").value; papView=docsLive().some(d=>matches(q,d.name,d.org||"",planRub(d.ref)?.name||""))?"registre":"plan"; setTab("papers"); $("q").value=q; render(); }
   });
-  window.addEventListener("beforeunload", e=>{ if(papPending()){ e.preventDefault(); e.returnValue=""; } });
+  window.addEventListener("beforeunload", e=>{ if(papPending() && !leavingForShortcut){ e.preventDefault(); e.returnValue=""; } });
 }

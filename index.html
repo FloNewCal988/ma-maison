@@ -343,8 +343,8 @@ details.more summary{padding:10px 0 4px;font-weight:600}
         <div class="card setrow">
           <strong>Papiers</strong>
           <div class="hint">Comment ranger un papier dans iCloud Drive depuis cet appareil :</div>
-          <select class="field" id="papModeSel"><option value="fichiers">« Enregistrer dans Fichiers » (je choisis le dossier)</option><option value="raccourci">Raccourci « Ranger dans iCloud » (automatique)</option></select>
-          <button class="btn ghost" id="papShortcutHelp">Créer le raccourci « Ranger dans iCloud »</button>
+          <select class="field" id="papModeSel"><option value="direct">Raccourci direct « Ranger mes papiers » (automatique, par lot)</option><option value="raccourci">Raccourci « Ranger dans iCloud » (par le menu de partage)</option><option value="fichiers">« Enregistrer dans Fichiers » (je choisis le dossier)</option></select>
+          <button class="btn ghost" id="papShortcutHelp">Créer le raccourci (pas à pas)</button>
           <div class="hint">Reprendre ton plan DocClass (Mac) une fois : fichier exporté par DocClass V2.5.2.</div>
           <button class="btn ghost" id="papImportBtn">Importer un plan DocClass (JSON)</button>
           <input type="file" id="papImportFile" accept="application/json,.json" class="hidden">
@@ -1444,7 +1444,7 @@ let tessP=null;
 function loadTesseract(){
   return tessP ||= new Promise((res,rej)=>{
     const s=document.createElement("script");
-    s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";   // version figée (sécurité)
     s.onload=()=>res(window.Tesseract);
     s.onerror=()=>{ tessP=null; s.remove(); rej(new Error("Impossible de charger le module de lecture (vérifie ta connexion).")); };
     document.head.appendChild(s);
@@ -1966,7 +1966,7 @@ const HELP = {
   papers: ["Classer tes papiers (DocClass)", [
     ["📄","Classer : choisis un PDF, un scan ou photographie un papier. Il est lu sur ton téléphone (OCR), rien n'est envoyé."],
     ["✅","Appuie sur un document : vérifie rubrique, sous-dossier, date et nom (score et raisons affichés), puis « Ranger… »."],
-    ["☁️","« Ranger » remet le fichier renommé à iOS : raccourci « Ranger dans iCloud » ou « Enregistrer dans Fichiers ». L'original n'est jamais supprimé."],
+    ["☁️","Mode direct : « Valider » chaque papier, puis « Ranger … dans iCloud » : le raccourci range tout le lot et vide le presse-papiers. Autres modes dans les Réglages. L'original n'est jamais supprimé."],
     ["🗂️","Registre : la liste de tes papiers rangés (sans leur contenu), avec les échéances dans « À surveiller »."],
     ["📚","Plan : classeurs A à E, rubriques et dossiers iCloud ; modifie-les, gère les règles mémorisées, imprime le guide A4."]]],
   infos: ["Entretien et infos de la maison", [
