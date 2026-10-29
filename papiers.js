@@ -11,6 +11,7 @@ const LS_PAPMODE = "mm_pap_mode";              // "direct" | "raccourci" | "fich
 const DIRECT_SHORTCUT = "Ranger mes papiers";   // raccourci du mode direct (sans menu de partage)
 const DIRECT_CHUNK = 12e6;                      // taille max. d'un envoi par le presse-papiers (caractères base64)
 let pendingSend = null, leavingForShortcut = false;
+const REPORT_MARK = "MAMAISON-RANGES";          // 1re ligne du compte rendu déposé par le raccourci
 let papView = "classer";
 const PQ = [];                                  // file d'analyse : en mémoire seulement (comme DocClass)
 let pqBusy = false, ocrWorker = null, pdfP = null;
@@ -139,11 +140,13 @@ function renderQueue(q){
   const list = PQ.filter(x=>!q || matches(q, x.file.name, x.prop?.ref||"", x.prop?.org||""));
   $("pqList").innerHTML = list.length ? list.map(x=>{
     const p=x.prop, rub=p&&p.ref?planRub(p.ref):null;
-    if(x.status==="validé") return papCard(`data-pq="${x.qid}"`, x.final.name, "→ "+paperPlace(x.final.ref, x.final.parts), x.b64?"Prêt pour le rangement automatique":"Préparation…", `<span class="pill">Validé ✓</span>`);
+    if(x.status==="validé") return papCard(`data-pq="${x.qid}"`, x.final.name, "→ "+paperPlace(x.final.ref, x.final.parts),
+      x.verifyFail?"Le raccourci ne l'a pas trouvé à sa destination : l'original n'a pas été supprimé. Réessaie.":x.b64?"Prêt pour le rangement automatique":"Préparation…",
+      x.verifyFail?`<span class="pill bad">✗ Introuvable dans iCloud</span>`:`<span class="pill">Validé ✓</span>`);
     const title = x.status==="rangé" ? "✓ "+x.savedName : x.file.name;   // ici le nom de fichier reste utile
     const where = x.status==="rangé" ? paperPlace(x.savedRef, x.savedParts) : rub ? `→ ${rub.ref} ${rub.name}${p.parts.length?" › "+folderLabel(p.parts):""}` : (x.status==="prêt"||x.status==="erreur") ? "→ rubrique à choisir" : "";
-    const meta = x.status==="analyse"||x.status==="attente" ? x.step : x.status==="erreur" ? "⚠️ "+x.step : x.status==="rangé" ? "Rangé · l'original reste à sa place" : `${p.date?"Date : "+p.date:"Date à confirmer"} · ${x.method||""}`;
-    const pills = x.status==="prêt"||x.status==="erreur" ? scorePill(p.score)+(p.kind!=="Non déterminé"?`<span class="pill">${esc(p.kind)}</span>`:"") : x.status==="rangé" ? `<span class="pill">Rangé</span>` : `<span class="pill warn">${x.status==="analyse"?"Lecture…":"En attente"}</span>`;
+    const meta = x.status==="analyse"||x.status==="attente" ? x.step : x.status==="erreur" ? "⚠️ "+x.step : x.status==="rangé" ? (x.verified?"Présent à sa destination":"Rangé (non vérifié)") : `${p.date?"Date : "+p.date:"Date à confirmer"} · ${x.method||""}`;
+    const pills = x.status==="prêt"||x.status==="erreur" ? scorePill(p.score)+(p.kind!=="Non déterminé"?`<span class="pill">${esc(p.kind)}</span>`:"") : x.status==="rangé" ? (x.verified?`<span class="pill">✓ Vérifié dans iCloud</span>`:`<span class="pill">Rangé</span>`) : `<span class="pill warn">${x.status==="analyse"?"Lecture…":"En attente"}</span>`;
     return papCard(`data-pq="${x.qid}"`, title, where, meta, pills);
   }).join("") : `<div class="empty">${q?"Aucun document dans la liste pour cette recherche.":"<b>📄 Choisir</b> un PDF ou un scan, ou <b>📷 Photographier</b> un papier.<br>Il est lu sur ton téléphone (rien n'est envoyé),<br>tu vérifies la proposition, puis tu le ranges dans iCloud.<br>Ma Maison ne garde que sa fiche dans le Registre."}</div>`;
   const nv=validated().length;
@@ -160,7 +163,7 @@ function renderDocs(q){
   const keys=Object.keys(groups).sort();
   $("docsList").innerHTML = keys.length ? keys.map(k=>`<div class="group"><h3>${esc(k)}</h3><div class="list" style="margin-top:0">${groups[k].map(d=>{
       const r=planRub(d.ref), dd=d.due&&!d.dueDone?daysUntil(dayTs(d.due)):null;
-      const pills=(d.kind&&d.kind!=="Non déterminé"?`<span class="pill">${esc(d.kind)}</span>`:"")+(dd!==null?`<span class="pill ${dd<0?"bad":dd<=14?"warn":""}">Échéance ${esc(fmtDate(dayTs(d.due)))}</span>`:"");
+      const pills=(d.verified?`<span class="pill">✓ Vérifié</span>`:"")+(d.kind&&d.kind!=="Non déterminé"?`<span class="pill">${esc(d.kind)}</span>`:"")+(dd!==null?`<span class="pill ${dd<0?"bad":dd<=14?"warn":""}">Échéance ${esc(fmtDate(dayTs(d.due)))}</span>`:"");
       return papCard(`data-doc="${esc(d.id)}"`, docTitle(d), r?`📁 ${r.ref} ${r.name}${d.parts?.length?" › "+folderLabel(d.parts):""}`:"📁 Rubrique à préciser", d.date?fmtDate(dayTs(d.date)):"Sans date", pills, d.name);
     }).join("")}</div></div>`).join("")
     : `<div class="empty">${q?"Aucun papier trouvé pour « "+esc(q)+" ».":"Aucun papier dans le registre.<br>Les papiers que tu ranges depuis « Classer » s'ajoutent ici.<br>Le bouton + ajoute un papier déjà rangé."}</div>`;
@@ -303,11 +306,26 @@ function openPQ(x){
     };
   });
 }
-function registerDoc(x, f){
+function registerDoc(x, f, verified){
   const now=Date.now(), id=uid();
   S.data.docs.push({id, name:f.name, title:x.file.name, ref:f.ref, parts:f.parts, path:f.path, date:f.date, due:f.due||"", dueDone:false,
-    kind:x.prop.kind, org:x.prop.org, notes:f.notes||"", savedAt:now, updatedAt:now});
-  Object.assign(x,{status:"rangé", docId:id, savedName:f.name, savedRef:f.ref, savedParts:f.parts, b64:null});
+    kind:x.prop.kind, org:x.prop.org, notes:f.notes||"", savedAt:now, updatedAt:now, ...(verified?{verified:true, verifiedAt:now}:{})});
+  Object.assign(x,{status:"rangé", docId:id, savedName:f.name, savedRef:f.ref, savedParts:f.parts, b64:null, verified:!!verified, verifyFail:false});
+}
+/* Compte rendu du raccourci : « MAMAISON-RANGES » puis un chemin vérifié par ligne (aucun contenu de document). */
+function parseReport(text){
+  const lines=String(text||"").replace(/\r/g,"").split("\n").map(l=>l.trim().normalize("NFC").replace(/^\/+/,"")).filter(Boolean);
+  if(lines[0]!==REPORT_MARK) return null;
+  return new Set(lines.slice(1));
+}
+function applyReport(items, found){
+  let ok=0, ko=0;
+  for(const x of items){
+    if(x.status!=="validé") continue;
+    if(found.has(x.final.path.normalize("NFC"))){ registerDoc(x, x.final, true); ok++; }
+    else { x.verifyFail=true; ko++; }
+  }
+  return {ok, ko};
 }
 function fileToBase64(file){
   return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>rej(r.error||new Error("lecture")); r.readAsDataURL(file); });
@@ -343,16 +361,31 @@ function openPendingSend(rest){
   if(!pendingSend) return;
   const items=pendingSend.ids.map(id=>PQ.find(x=>x.qid===id)).filter(Boolean);
   modal(`${sheetHead("paper","Rangement automatique", `${plural(items.length,"papier")} envoyé${items.length>1?"s":""} au raccourci`)}
-    <div class="hint">Le raccourci « ${esc(DIRECT_SHORTCUT)} » s'ouvre et range les fichiers. Reviens ensuite ici (« ◀ » en haut à gauche) et confirme.</div>
+    <div class="hint">Le raccourci « ${esc(DIRECT_SHORTCUT)} » range les fichiers, vérifie qu'ils sont bien arrivés, puis dépose un compte rendu. Reviens ici (« ◀ » en haut à gauche) et touche « Coller le compte rendu ».</div>
     <div class="card" style="padding:2px 12px;margin-top:10px">${items.map(x=>`<div class="sub" style="cursor:default"><div style="min-width:0"><div class="name">${esc(x.final.name)}</div><div class="meta" style="margin:0;word-break:break-all">${esc(x.final.path.split("/").slice(0,-1).join("/"))}</div></div></div>`).join("")}</div>
     ${rest?`<div class="hint">Encore ${plural(rest,"papier")} à envoyer ensuite (lot découpé pour ne pas surcharger le presse-papiers).</div>`:""}
-    <div class="hint">Vérifie la notification du raccourci, ou le dossier dans l'app Fichiers.</div>
-    <div class="actions"><button class="btn ghost" id="psRetry">Relancer le raccourci</button><span class="spacer"></span>
-      <button class="btn ghost" id="psNo">Pas rangés</button><button class="btn" id="psYes">Oui, c'est rangé</button></div>`,
+    <button class="btn block" id="psPaste" style="margin-top:14px">📋 Coller le compte rendu</button>
+    <div class="err" id="psErr"></div>
+    <details style="margin-top:10px"><summary class="meta" style="margin:0">Autres choix</summary>
+      <div class="actions" style="margin-top:8px"><button class="btn ghost small" id="psRetry">Relancer le raccourci</button><button class="btn ghost small" id="psYes">Confirmer sans vérifier</button><button class="btn ghost small" id="psNo">Pas rangés</button></div>
+    </details>`,
   (bd, close)=>{
     bd.dataset.busy="1";   // pas de fermeture par appui à côté : il faut répondre
     bd.querySelector("#psRetry").onclick=()=>launchShortcut();
     bd.querySelector("#psNo").onclick=()=>{ pendingSend=null; close(); render(); toast("Rien n'est inscrit au registre ; les papiers restent validés."); };
+    bd.querySelector("#psPaste").onclick=()=>{
+      const err=bd.querySelector("#psErr"); err.textContent="";
+      let read; try{ read=navigator.clipboard.readText(); }catch(e){ read=Promise.reject(e); }   // dans le geste : iOS propose « Coller »
+      read.then(text=>{
+        const found=parseReport(text);
+        if(!found){ err.textContent="Pas de compte rendu dans le presse-papiers. Le raccourci est-il terminé et à jour (étapes de vérification) ? Sinon, « Autres choix »."; return; }
+        const r=applyReport(items, found);
+        pendingSend=null;
+        try{ navigator.clipboard.writeText("").catch(()=>{}); }catch(e){}
+        touch(); close(); render();
+        toast(r.ko?`✓ ${r.ok} vérifié${r.ok>1?"s":""} · ✗ ${r.ko} introuvable${r.ko>1?"s":""} : à réessayer`:`✓ ${plural(r.ok,"papier")} vérifié${r.ok>1?"s":""} et ajouté${r.ok>1?"s":""} au registre`);
+      }).catch(e=>{ err.textContent="Lecture du presse-papiers refusée ("+(e&&e.message||"autorisation")+"). Touche de nouveau et choisis « Coller »."; });
+    };
     bd.querySelector("#psYes").onclick=()=>{
       for(const x of items) if(x.status==="validé") registerDoc(x, x.final);
       pendingSend=null;
@@ -400,7 +433,7 @@ function openDoc(d){
     <label class="chkline"><input type="checkbox" id="dDone"${d.dueDone?" checked":""}> Échéance traitée (plus de rappel)</label>
     <label>Note</label><input class="field" id="dNotes" value="${esc(d.notes||"")}" autocomplete="off">
     ${isNew?"":`<label>Emplacement</label><div class="card" style="padding:10px 12px"><div style="font-weight:600" id="dPlace"></div><div class="meta" id="dPath" style="word-break:break-all"></div></div>
-      ${d.title&&d.title!==d.name?`<div class="meta">Nom d'origine : ${esc(d.title)}</div>`:""}${d.savedAt?`<div class="meta">Rangé le ${fmtDate(d.savedAt)}</div>`:""}`}
+      ${d.title&&d.title!==d.name?`<div class="meta">Nom d'origine : ${esc(d.title)}</div>`:""}${d.savedAt?`<div class="meta">Rangé le ${fmtDate(d.savedAt)}${d.verified?" · ✓ présence vérifiée dans iCloud par le raccourci":""}</div>`:""}`}
     <div class="err" id="dErr"></div>
     <div class="actions">${isNew?"":`<button class="btn danger" id="dDel">Retirer</button><button class="btn ghost" id="dCopy">Copier le chemin</button>${d.due?`<button class="btn ghost" id="dIcs">🔔</button>`:""}`}<span class="spacer"></span>
       <button class="btn ghost" id="dCancel">Annuler</button><button class="btn" id="dSave">Enregistrer</button></div>`,
@@ -600,11 +633,14 @@ function openShortcutHelp(){
       ["5d","« Définir le nom » : renomme le résultat base64 (5b) avec la valeur « nom » (5c)."],
       ["5e","« Obtenir la valeur du dictionnaire » : clé « chemin », dans « Élément répété »."],
       ["5f","« Enregistrer le fichier » : le fichier renommé (5d) ; touche ›, désactive « Demander où enregistrer », Destination = iCloud Drive, Sous-chemin = la valeur « chemin » (5e), « Écraser si le fichier existe » DÉSACTIVÉ."],
+      ["V1","Juste après « Enregistrer » : « Récupérer le fichier depuis » iCloud Drive « au chemin » = la valeur « chemin » (5e) ; désactive « Erreur si introuvable »."],
+      ["V2","« Définir la variable » : nom « copie », valeur = Fichier (V1)."],
+      ["V3","« Si » copie « possède n'importe quelle valeur » → « Ajouter à la variable » : la valeur « chemin » (5e) dans la variable « rangés ». Terminer si."],
       ["5g","« Obtenir la valeur du dictionnaire » : clé « origine », dans « Élément répété » (nom du fichier d'origine)."],
       ["5h","« Texte » : ADMINISTRATION_PERSONNELLE/00_A_TRAITER/ suivi de la valeur « origine » (5g)."],
       ["5i","« Obtenir le fichier dans le dossier » : dossier iCloud Drive, chemin = le Texte (5h) ; désactive « Erreur si introuvable »."],
-      ["5j","« Si » : Fichier (5i) « a une valeur » → « Supprimer les fichiers » (Fichier 5i). Laisse « Confirmer avant de supprimer » activé pour les premiers essais. Fin du Si."],
-      ["6","Après la boucle : action « Texte » laissée vide, puis « Copier dans le presse-papiers » (vide le presse-papiers : confidentialité)."],
+      ["5j","« Si » : Fichier (5i) « possède n'importe quelle valeur », + 2e condition : copie « possède n'importe quelle valeur », avec « Toutes » → « Supprimer » Fichier (5i), « Supprimer immédiatement » désactivé. Terminer si."],
+      ["6","Après la boucle : action « Texte » = MAMAISON-RANGES, retour à la ligne, puis la variable « rangés » ; « Copier dans le presse-papiers » (compte rendu : chemins seulement, le contenu des papiers est remplacé)."],
       ["7","Action « Afficher la notification » : « Papiers rangés ✓ » (facultatif)."],
       ["8","Ici : ⚙️ Réglages → Papiers → choisis « Raccourci direct ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : choisis « Toujours autoriser »."]
     ])}</div>
