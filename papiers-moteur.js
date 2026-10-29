@@ -247,7 +247,7 @@ const DC = (() => {
     const dueOpt=d.options.filter(o=>o.due).sort((a,b)=>a.date<b.date?-1:1)[0];
     return {ref, org:org||"", orgSource, date:d.date, dateOptions:d.options, dateReason:d.reason, parts, due:dueOpt?dueOpt.date:"",
       score:sc.score, scoreItems:sc.items, kind:t.kind, kindEvidence:t.evidence, rule, ext,
-      filename:suggestName(isGenericName(stem) ? descriptiveStem(t.kind, org, stem) : stem, ext, d.date),
+      filename:suggestName(cleanName(stem, t.kind, org), ext, d.date || periodOf(name)),
       reason:rule?"Règle approuvée : "+rule:(org?"Organisme reconnu":(ref?"Catégorie suggérée":"À choisir manuellement"))};
   }
   /* nom d'appareil photo ou de scanner (IMG_4021, Scan 12, Document, 0004…) : peu parlant */
@@ -256,9 +256,36 @@ const DC = (() => {
     const words=[kind && kind!=="Non déterminé" ? kind : "", org||""].filter(Boolean).join(" ");
     return words || stem;
   }
+  /* Nom propre : on garde les mots du nom d'origine, sans identifiants (C10294589), numéros,
+     dates ni mois (déjà dans le préfixe). Nom trop pauvre ou générique → type + organisme. */
+  const NAME_STOP=new Set(["de","du","des","la","le","les","l","d","et","a","au","aux","en","pour","sur","un","une","n","no"]);
+  const MONTH_WORDS=new Set([...Object.keys(MONTHS),"janv","fev","fevr","avr","juil","sept","oct","nov","dec"]);
+  function cleanWords(text){
+    return slug(text).toLowerCase().split("_").filter(w=>w && !/\d/.test(w) && !MONTH_WORDS.has(w) && w.length>1 || w==="d" || w==="l");
+  }
+  function cleanName(stem, kind, org){
+    const NOISE=/^(img|image|photo|pxl|dsc|dcim|scan|scanned|numerisation|document|doc|fichier|capture|screenshot|untitled|copie|copy|final|finale|version|v|vf|def|definitif|nouveau|new|ok)$/;
+    const kept=cleanWords(stem).filter(w=>!/\d/.test(w) && !NOISE.test(w));
+    while(kept.length && NAME_STOP.has(kept[0])) kept.shift();
+    while(kept.length && NAME_STOP.has(kept[kept.length-1])) kept.pop();
+    const meaningful=kept.filter(w=>!NAME_STOP.has(w));
+    const known = kind && kind!=="Non déterminé";
+    if(meaningful.length>=2) return kept.join("_");   // nom déjà parlant : on le garde (nettoyé)
+    const base=[known?kind:"", org||""].filter(Boolean).join(" ");
+    return base ? slug(base).toLowerCase() : (kept.join("_") || slug(stem).toLowerCase() || "document");
+  }
+  /* période AAAA-MM lisible dans le nom (« Bulletin 2026_09 » → 2026-09), quand aucune date sûre */
+  function periodOf(name){
+    const n=baseNorm(name);
+    let m=n.match(/(?:^|[^0-9])((?:19|20)\d{2})[-_. ](0[1-9]|1[0-2])(?![0-9])/);
+    if(m) return `${m[1]}-${m[2]}`;
+    m=n.match(new RegExp("(?:^|[^a-z])("+Object.keys(MONTHS).join("|")+")[\\s_-]*((?:19|20)\\d{2})(?![0-9])"));
+    if(m) return `${m[2]}-${String(MONTHS[m[1]]).padStart(2,"0")}`;
+    return "";
+  }
   function suggestName(stem, ext, date){
     const s=slug(stem).slice(0,65)||"document";
-    const withoutDate=s.replace(/^\d{4}_\d{2}_\d{2}_?/,"")||s;
+    const withoutDate=s.replace(/^\d{4}_\d{2}(?:_\d{2})?_?/,"")||s;
     return (date ? date+"_"+withoutDate : s)+(ext||"");
   }
   function validName(n){ return !!n && n.trim()===n && !/[\/\\:~]/.test(n) && n!=="." && n!==".." && n.length<=150; }
@@ -268,6 +295,6 @@ const DC = (() => {
   }
   return {D, norm, baseNorm, slug, buildDefaultPlan, planRubrique, planFolder, dateCandidates, chooseDate, identifyType,
     matchOrganism, matchKnown, matchDocumentType, classify, classifyV17, rulePhrase, validateRule, ruleMatches, confidence,
-    propose, suggestName, isGenericName, validName, targetPath, byRef, rubriques, splitName, isoOf};
+    propose, suggestName, cleanName, periodOf, isGenericName, validName, targetPath, byRef, rubriques, splitName, isoOf};
 })();
 if(typeof module!=="undefined") module.exports=DC;

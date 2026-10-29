@@ -59,4 +59,12 @@ t("photo au nom générique : nom tiré du type et de l'organisme", () => {
   assert.ok(DC.isGenericName("Scan 0004") && DC.isGenericName("Document") && !DC.isGenericName("Facture Enercal"));
   assert.strictEqual(DC.propose("Facture Enercal.pdf", "", plan, []).filename, "facture_enercal.pdf");
 });
+t("nom propre : sans identifiant ni chiffres parasites, date du nom conservée", () => {
+  const n = (f, txt) => DC.propose(f, txt, plan, []).filename;
+  assert.strictEqual(n("Bulletin_C10294589_2026_09_2.pdf", "CENTRE HOSPITALIER TERRITORIAL GASTON-BOURRET\nBULLETIN DE PAIE"), "2026-09-02_bulletin_de_salaire_cht_gaston_bourret.pdf");
+  assert.strictEqual(n("Releve BNC mars 2025.pdf", "Relevé de compte"), "2025-03_releve_bnc.pdf");
+  assert.strictEqual(n("Avis_impot_2025_v2_FINAL.pdf", "AVIS D IMPOSITION\nNouméa, le 12 août 2025"), "2025-08-12_avis_impot.pdf");
+  assert.strictEqual(n("Copie de Contrat_location_V3.pdf", ""), "contrat_location.pdf");
+  assert.strictEqual(n("CV candidature recherche emploi.pdf", "Diplômé INSA Toulouse"), "cv_candidature_recherche_emploi.pdf");
+});
 console.log(`\n${ok} test(s) réussi(s)${process.exitCode ? " — ÉCHECS ci-dessus" : ""}`);

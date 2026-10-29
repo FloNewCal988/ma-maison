@@ -256,7 +256,7 @@ function openPQ(x){
     const update=()=>{
       const c=cur();
       // nom généré non retouché : seule la date change (le nom descriptif proposé par le moteur est conservé)
-      if(g("#qName").value===lastAuto){ const core=DC.splitName(lastAuto)[0].replace(/^\d{4}-\d{2}-\d{2}_?/,"")||stem; lastAuto=DC.suggestName(core, ext, c.date); g("#qName").value=lastAuto; c.name=lastAuto; }
+      if(g("#qName").value===lastAuto){ const core=DC.splitName(lastAuto)[0].replace(/^\d{4}-\d{2}(?:-\d{2})?_?/,"")||stem; lastAuto=DC.suggestName(core, ext, c.date); g("#qName").value=lastAuto; c.name=lastAuto; }
       g("#qPlace").textContent=paperPlace(c.ref,c.parts);
       g("#qPath").textContent=c.ref?planPathOf(c.ref,c.parts,c.name||"…"):"";
       const clash=c.ref && docsLive().some(d=>d.path===planPathOf(c.ref,c.parts,c.name));
