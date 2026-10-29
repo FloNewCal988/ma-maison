@@ -14,6 +14,7 @@ let pendingSend = null, leavingForShortcut = false;
 let papView = "classer";
 const PQ = [];                                  // file d'analyse : en mémoire seulement (comme DocClass)
 let pqBusy = false, ocrWorker = null, pdfP = null;
+const planOpen = new Set();   // catégories du plan dépliées (mémorisées pendant la session)
 
 /* ---------- accès aux données ---------- */
 const planLive = () => live(S.data.plan||[]).sort((a,b)=>a.id.localeCompare(b.id,"fr"));
@@ -119,9 +120,9 @@ const validated = () => PQ.filter(x=>x.status==="validé");
 function pqRemove(q){ const i=PQ.indexOf(q); if(i>=0) PQ.splice(i,1); render(); }
 
 /* ---------- rendu ---------- */
-function papCard(attrs, title, where, meta, pills){
+function papCard(attrs, title, where, meta, pills, oneLine){
   return `<div class="card item" ${attrs}><div class="main"><div class="name">${esc(title)}</div>
-    ${where?`<div class="where">${esc(where)}</div>`:""}${meta?`<div class="meta">${esc(meta)}</div>`:""}${pills||""}</div></div>`;
+    ${where?`<div class="where">${esc(where)}</div>`:""}${meta?`<div class="meta">${esc(meta)}</div>`:""}${oneLine?`<div class="meta one">${esc(oneLine)}</div>`:""}${pills||""}</div></div>`;
 }
 function scorePill(s){ const cls = s>=80?"":s>=50?" warn":" bad"; return `<span class="pill${cls}">${s}/100</span>`; }
 function renderPapiers(q){
@@ -144,7 +145,7 @@ function renderQueue(q){
     const meta = x.status==="analyse"||x.status==="attente" ? x.step : x.status==="erreur" ? "⚠️ "+x.step : x.status==="rangé" ? "Rangé · l'original reste à sa place" : `${p.date?"Date : "+p.date:"Date à confirmer"} · ${x.method||""}`;
     const pills = x.status==="prêt"||x.status==="erreur" ? scorePill(p.score)+(p.kind!=="Non déterminé"?`<span class="pill">${esc(p.kind)}</span>`:"") : x.status==="rangé" ? `<span class="pill">Rangé</span>` : `<span class="pill warn">${x.status==="analyse"?"Lecture…":"En attente"}</span>`;
     return papCard(`data-pq="${x.qid}"`, title, where, meta, pills);
-  }).join("") : `<div class="empty">${q?"Aucun document dans la liste pour cette recherche.":"Choisis un ou plusieurs papiers (PDF, scan ou photo).<br>Ils sont lus sur ton téléphone, puis tu vérifies<br>la proposition avant de les ranger."}</div>`;
+  }).join("") : `<div class="empty">${q?"Aucun document dans la liste pour cette recherche.":"<b>📄 Choisir</b> un PDF ou un scan, ou <b>📷 Photographier</b> un papier.<br>Il est lu sur ton téléphone (rien n'est envoyé),<br>tu vérifies la proposition, puis tu le ranges dans iCloud.<br>Ma Maison ne garde que sa fiche dans le Registre."}</div>`;
   const nv=validated().length;
   if(nv && papMode()==="direct") $("pqList").insertAdjacentHTML("afterbegin", `<button class="btn block" data-pqsend="1">☁️ Ranger ${nv>1?"les "+nv+" papiers validés":"le papier validé"} dans iCloud</button>`);
   const done=PQ.filter(x=>x.status==="rangé").length;
@@ -160,7 +161,7 @@ function renderDocs(q){
   $("docsList").innerHTML = keys.length ? keys.map(k=>`<div class="group"><h3>${esc(k)}</h3><div class="list" style="margin-top:0">${groups[k].map(d=>{
       const r=planRub(d.ref), dd=d.due&&!d.dueDone?daysUntil(dayTs(d.due)):null;
       const pills=(d.kind&&d.kind!=="Non déterminé"?`<span class="pill">${esc(d.kind)}</span>`:"")+(dd!==null?`<span class="pill ${dd<0?"bad":dd<=14?"warn":""}">Échéance ${esc(fmtDate(dayTs(d.due)))}</span>`:"");
-      return papCard(`data-doc="${esc(d.id)}"`, docTitle(d), r?`📁 ${r.ref} ${r.name}${d.parts?.length?" › "+folderLabel(d.parts):""}`:"📁 Rubrique à préciser", [d.date?fmtDate(dayTs(d.date)):"", d.name].filter(Boolean).join(" · "), pills);
+      return papCard(`data-doc="${esc(d.id)}"`, docTitle(d), r?`📁 ${r.ref} ${r.name}${d.parts?.length?" › "+folderLabel(d.parts):""}`:"📁 Rubrique à préciser", d.date?fmtDate(dayTs(d.date)):"Sans date", pills, d.name);
     }).join("")}</div></div>`).join("")
     : `<div class="empty">${q?"Aucun papier trouvé pour « "+esc(q)+" ».":"Aucun papier dans le registre.<br>Les papiers que tu ranges depuis « Classer » s'ajoutent ici.<br>Le bouton + ajoute un papier déjà rangé."}</div>`;
 }
@@ -172,21 +173,32 @@ function docTitle(d){
 }
 const planHay = p => [p.code, p.ref, p.name, p.category, p.detail, p.examples, p.parts.length?"":p.keywords, "classeur "+p.binder];
 function findPlan(q){ return planLive().filter(p=>matches(q, planHay(p))).sort((a,b)=>(a.parts.length?1:0)-(b.parts.length?1:0) || a.id.localeCompare(b.id,"fr")); }
-function planCard(p){
+function planCard(p, compact){
   const kids = p.parts.length ? 0 : planLive().filter(x=>x.ref===p.ref && x.parts.length===1).length;
   return papCard(`data-plan="${esc(p.id)}"`, `${p.ref} — ${p.name}${p.parts.length?" › "+p.detail:""}`,
-    `📁 Classeur ${p.binder} · intercalaire ${p.catcode} · fiche ${p.code}`, (p.examples||"").split("\n")[0], kids?`<span class="pill">${plural(kids,"dossier")}</span>`:"");
+    compact ? `📁 Fiche ${p.code}` : `📁 Classeur ${p.binder} · intercalaire ${p.catcode} · fiche ${p.code}`, (p.examples||"").split("\n")[0], kids?`<span class="pill">${plural(kids,"dossier")}</span>`:"");
 }
 function renderPlan(q){
   const nr=rulesLive().length;
-  $("planTools").innerHTML = `<button class="btn ghost small" id="pRules">Règles mémorisées${nr?` · ${nr}`:""}</button><button class="btn ghost small" id="pPrint">🖨️ Guide des classeurs</button>`;
+  $("planTools").innerHTML = `<button class="btn ghost small" id="pRules">Règles${nr?` · ${nr}`:""}</button><button class="btn ghost small" id="pPrint">🖨️ Guide A4</button>`;
   $("pRules").onclick=openRules; $("pPrint").onclick=openPrintMenu;
-  const all=planLive(), list = q ? findPlan(q) : all.filter(p=>!p.parts.length);
-  const groups={}; for(const p of list) (groups[p.binder] ||= []).push(p);
-  const cats={}; for(const p of all) if(!p.parts.length) (cats[p.binder] ||= new Set()).add(p.catcode+" "+p.category);
-  $("planList").innerHTML = Object.keys(groups).sort().map(b=>`<div class="group"><h3>Classeur ${esc(b)} · ${esc([...(cats[b]||[])].sort().join(" · "))}</h3>
-    <div class="list" style="margin-top:0">${groups[b].map(planCard).join("")}</div></div>`).join("")
-    || `<div class="empty">Aucune rubrique trouvée pour « ${esc(q)} ».</div>`;
+  const all=planLive();
+  if(q){
+    const list=findPlan(q), groups={}; for(const p of list) (groups[p.binder] ||= []).push(p);
+    $("planList").innerHTML = Object.keys(groups).sort().map(b=>`<div class="group"><h3>Classeur ${esc(b)}</h3>
+      <div class="list" style="margin-top:0">${groups[b].map(planCard).join("")}</div></div>`).join("")
+      || `<div class="empty">Aucune rubrique trouvée pour « ${esc(q)} ».</div>`;
+    return;
+  }
+  // Sans recherche : classeur › catégorie repliable › rubriques (au lieu de 66 cartes d'un coup)
+  const byBinder={};
+  for(const p of all.filter(x=>!x.parts.length)) ((byBinder[p.binder] ||= {})[p.catcode+"|"+p.category] ||= []).push(p);
+  const nDocs = ref => docsLive().filter(d=>d.ref===ref).length;
+  $("planList").innerHTML = Object.keys(byBinder).sort().map(b=>`<div class="group"><h3>Classeur ${esc(b)}</h3>${
+    Object.keys(byBinder[b]).sort().map(k=>{ const [code,cat]=k.split("|"), rubs=byBinder[b][k], nd=rubs.reduce((n,r)=>n+nDocs(r.ref),0);
+      return `<details class="cat" data-cat="${esc(code)}"${planOpen.has(code)?" open":""}><summary><span>${esc(code)} — ${esc(cat)}</span><small>${plural(rubs.length,"rubrique")}${nd?` · ${plural(nd,"papier")}`:""}</small></summary>
+        <div class="list">${rubs.map(r=>planCard(r,true)).join("")}</div></details>`; }).join("")}</div>`).join("");
+  $("planList").querySelectorAll("details.cat").forEach(d=>d.addEventListener("toggle",()=>{ d.open?planOpen.add(d.dataset.cat):planOpen.delete(d.dataset.cat); }));
 }
 /* recherche de l'onglet Rangement : papiers du registre puis plan */
 function papSearchBlock(q){
@@ -195,7 +207,7 @@ function papSearchBlock(q){
   const plan = findPlan(q).slice(0, Math.max(0,4-docs.length));
   if(!docs.length && !plan.length) return "";
   return `<div class="group"><h3>📄 Papiers</h3><div class="list" style="margin-top:0">${
-    docs.map(d=>papCard(`data-doc="${esc(d.id)}"`, docTitle(d), "📁 "+paperPlace(d.ref,d.parts), [d.date?fmtDate(dayTs(d.date)):"", d.name].filter(Boolean).join(" · "), "")).join("")+plan.map(planCard).join("")}</div>
+    docs.map(d=>papCard(`data-doc="${esc(d.id)}"`, docTitle(d), "📁 "+paperPlace(d.ref,d.parts), d.date?fmtDate(dayTs(d.date)):"", "", d.name)).join("")+plan.map(planCard).join("")}</div>
     <button class="btn ghost small" data-papsearch="1" style="margin-top:8px">Chercher dans Papiers</button></div>`;
 }
 function docAlerts(){
@@ -590,7 +602,7 @@ function openShortcutHelp(){
       ["5f","« Enregistrer le fichier » : le fichier renommé (5d) ; touche ›, désactive « Demander où enregistrer », Destination = iCloud Drive, Sous-chemin = la valeur « chemin » (5e), « Écraser si le fichier existe » DÉSACTIVÉ."],
       ["6","Après la boucle : action « Texte » laissée vide, puis « Copier dans le presse-papiers » (vide le presse-papiers : confidentialité)."],
       ["7","Action « Afficher la notification » : « Papiers rangés ✓ » (facultatif)."],
-      ["8","Ici : ⚙️ Réglages → Papiers → « Raccourci direct ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : choisis « Toujours autoriser »."]
+      ["8","Ici : ⚙️ Réglages → Papiers → choisis « Raccourci direct ». Au 1er usage, iOS demande l'accès au presse-papiers et à iCloud Drive : choisis « Toujours autoriser »."]
     ])}</div>
     <div class="hint">Le raccourci crée les dossiers manquants. S'il échoue, réponds « Pas rangés » dans Ma Maison : tes papiers restent validés, et tu peux passer au mode « Enregistrer dans Fichiers ».</div>
     <details style="margin-top:10px"><summary class="meta">Ancien raccourci « Ranger dans iCloud » (par le menu de partage)</summary>
@@ -609,11 +621,14 @@ function initPapiers(){
     else if(confirm(`Retirer les ${PQ.length} document(s) de la liste ?\n\nAucun fichier n'est supprimé ; le registre est conservé.`)) PQ.splice(0, PQ.length);
     render(); };
   document.querySelectorAll("#papSeg button").forEach(b=>b.onclick=()=>{ papView=b.dataset.v; $("q").value=""; setTab("papers"); });
-  $("papModeSel").value=papMode();
-  $("papModeSel").onchange=e=>{ try{ localStorage.setItem(LS_PAPMODE, e.target.value); }catch(_){}
-    toast(e.target.value==="direct"?`Rangement automatique par le raccourci « ${DIRECT_SHORTCUT} »`:e.target.value==="raccourci"?"Rangement par le raccourci « Ranger dans iCloud »":"Rangement par « Enregistrer dans Fichiers »");
-    if(e.target.value!=="direct") for(const x of validated()){ x.status="prêt"; x.b64=null; }
-    render(); };
+  const radios=[...document.querySelectorAll('input[name="papMode"]')];
+  for(const r of radios){
+    r.checked = r.value===papMode();
+    r.onchange=()=>{ if(!r.checked) return; try{ localStorage.setItem(LS_PAPMODE, r.value); }catch(_){}
+      toast(r.value==="direct"?`Rangement automatique par le raccourci « ${DIRECT_SHORTCUT} »`:r.value==="raccourci"?"Rangement par le raccourci « Ranger dans iCloud »":"Rangement par « Enregistrer dans Fichiers »");
+      if(r.value!=="direct") for(const x of validated()){ x.status="prêt"; x.b64=null; }
+      render(); };
+  }
   $("papShortcutHelp").onclick=openShortcutHelp;
   $("papImportBtn").onclick=()=>$("papImportFile").click();
   $("papImportFile").onchange=e=>{ if(e.target.files[0]) importDocClassPlan(e.target.files[0]); e.target.value=""; };

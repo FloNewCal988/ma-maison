@@ -190,6 +190,33 @@ nav.tabs button{position:relative}
 .chkline input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 details.more{border:1px solid var(--line);border-radius:12px;padding:2px 12px 12px;margin-top:14px}
 details.more summary{padding:10px 0 4px;font-weight:600}
+/* Ergonomie V2 */
+.wrap{padding-bottom:88px}                          /* le bouton + ne cache plus la dernière carte */
+.meta.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero.nophoto{aspect-ratio:auto;height:96px}.hero.nophoto::before{font-size:46px}
+.alerts .more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:transparent;color:var(--accent);font-weight:600;font-size:14px;padding:10px 14px;text-align:left;cursor:pointer}
+details.setgrp{padding:0;overflow:hidden}
+details.setgrp>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;color:var(--text)}
+details.setgrp>summary::-webkit-details-marker{display:none}
+details.setgrp>summary .si{flex:none;width:34px;height:34px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:17px}
+details.setgrp>summary .st{flex:1;min-width:0}
+details.setgrp>summary .st b{display:block;font-weight:600}
+details.setgrp>summary .st span{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+details.setgrp>summary::after{content:"›";color:var(--muted);font-size:22px;transition:transform .15s}
+details.setgrp[open]>summary::after{transform:rotate(90deg)}
+details.setgrp .setbody{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.radio{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;margin:0;color:var(--text);font-size:15px}
+.radio input{margin:3px 0 0;width:20px;height:20px;accent-color:var(--accent);flex:none}
+.radio small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.radio:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.setlead{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);margin:0 2px 2px}
+details.cat{margin-top:8px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow)}
+details.cat>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;color:var(--text);font-weight:600}
+details.cat>summary::-webkit-details-marker{display:none}
+details.cat>summary span{flex:1}details.cat>summary small{color:var(--muted);font-weight:400}
+details.cat>summary::after{content:"›";color:var(--muted);font-size:20px;transition:transform .15s}
+details.cat[open]>summary::after{transform:rotate(90deg)}
+details.cat .list{margin:0;padding:0 10px 10px}
 /* Papiers : guide imprimable A4 */
 #printRoot{display:none}
 @media print{
@@ -269,18 +296,18 @@ details.more summary{padding:10px 0 4px;font-weight:600}
 
   <main class="wrap">
     <section id="tab-items">
-      <div id="alertsBox"></div>
-      <div class="quick">
-        <input id="quickIn" placeholder="ex. tente dans armoire terrasse" autocomplete="off">
+      <div class="quick" style="margin-top:0">
+        <input id="quickIn" placeholder="ex. tente dans armoire terrasse" autocomplete="off" enterkeyhint="done">
         <button class="btn" id="quickBtn">OK</button>
       </div>
-      <div class="hint">Écris (ou dicte) « objet dans rangement ». Ex : « J'ai rangé la tente dans l'armoire de la terrasse ».</div>
+      <div class="hint" id="quickHint">Écris (ou dicte) « objet dans rangement ». Ex : « J'ai rangé la tente dans l'armoire de la terrasse ».</div>
+      <div id="alertsBox"></div>
       <div class="list" id="itemsList"></div>
     </section>
 
     <section id="tab-places" class="hidden">
       <button class="btn ghost block" id="scanQrBtn">📷 Scanner une étiquette de rangement</button>
-      <div class="hint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets. Appuie sur un rangement pour voir son contenu et imprimer son étiquette QR.</div>
+      <div class="hint" id="placesHint">Crée tes rangements (armoire, tiroir, étagère…) avec le bouton +, puis ajoute-y des objets. Appuie sur un rangement pour voir son contenu et imprimer son étiquette QR.</div>
       <div id="placesList"></div>
     </section>
 
@@ -316,10 +343,9 @@ details.more summary{padding:10px 0 4px;font-weight:600}
     <section id="tab-papers" class="hidden">
       <div class="seg" id="papSeg" style="margin-top:0"><button data-v="classer" class="on">Classer</button><button data-v="registre">Registre</button><button data-v="plan">Plan</button></div>
       <div id="pap-classer">
-        <div class="row2" style="margin-top:12px"><button class="btn" id="papPick">📄 Choisir des papiers</button><button class="btn ghost" id="papCam">📷 Photographier</button></div>
+        <div class="row2" style="margin-top:12px"><button class="btn" id="papPick">📄 Choisir</button><button class="btn ghost" id="papCam">📷 Photographier</button></div>
         <input type="file" id="papFile" accept="application/pdf,image/*,.pdf,.txt" multiple class="hidden">
         <input type="file" id="papCamFile" accept="image/*" capture="environment" class="hidden">
-        <div class="hint">PDF, scan ou photo : lu sur ton téléphone (rien n'est envoyé). Vérifie la proposition, puis « Ranger » : le fichier renommé part dans ton iCloud Drive. Ma Maison ne garde que la fiche du registre.</div>
         <div class="list" id="pqList"></div>
         <button class="btn ghost small hidden" id="pqClear" style="margin-top:10px">Vider la liste</button>
       </div>
@@ -329,49 +355,68 @@ details.more summary{padding:10px 0 4px;font-weight:600}
 
     <section id="tab-settings" class="hidden">
       <div class="stack">
-        <div class="card setrow">
-          <strong>Pièces</strong>
-          <div class="hint">Appuie sur une pièce pour la renommer ou la supprimer.</div>
-          <div class="chips wrapchips" id="roomsChips"></div>
-          <button class="btn ghost small" data-addlist="rooms">+ Ajouter une pièce</button>
-        </div>
-        <div class="card setrow">
-          <strong>Catégories d'objets</strong>
-          <div class="chips wrapchips" id="catsChips"></div>
-          <button class="btn ghost small" data-addlist="cats">+ Ajouter une catégorie</button>
-        </div>
-        <div class="card setrow">
-          <strong>Papiers</strong>
-          <div class="hint">Comment ranger un papier dans iCloud Drive depuis cet appareil :</div>
-          <select class="field" id="papModeSel"><option value="direct">Raccourci direct « Ranger mes papiers » (automatique, par lot)</option><option value="raccourci">Raccourci « Ranger dans iCloud » (par le menu de partage)</option><option value="fichiers">« Enregistrer dans Fichiers » (je choisis le dossier)</option></select>
-          <button class="btn ghost" id="papShortcutHelp">Créer le raccourci (pas à pas)</button>
-          <div class="hint">Reprendre ton plan DocClass (Mac) une fois : fichier exporté par DocClass V2.5.2.</div>
-          <button class="btn ghost" id="papImportBtn">Importer un plan DocClass (JSON)</button>
-          <input type="file" id="papImportFile" accept="application/json,.json" class="hidden">
-        </div>
-        <div class="card setrow">
-          <strong>Synchronisation</strong>
-          <div class="hint" id="setInfo"></div>
-          <button class="btn ghost" id="syncNow">Synchroniser maintenant</button>
-        </div>
-        <div class="card setrow">
-          <strong>Sécurité</strong>
-          <div class="hint">Verrouillage automatique après 10 min d'inactivité. Données et photos chiffrées (AES-256) avant l'envoi sur GitHub.</div>
-          <label class="chkline" style="margin-top:4px"><input type="checkbox" id="remToggle"> Rester connecté sur cet appareil</label>
-          <div class="hint" style="margin-top:0">Plus besoin du mot de passe à l'ouverture sur ce téléphone. Le bouton 🔒 en haut déconnecte l'appareil et redemandera le mot de passe.</div>
-          <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
-        </div>
-        <div class="card setrow">
-          <strong>Sauvegarde</strong>
-          <div class="hint">Copie lisible de tes données, sans les photos (à garder en lieu sûr : elle n'est pas chiffrée).</div>
-          <button class="btn ghost" id="exportBtn">Exporter (JSON)</button>
-          <button class="btn ghost" id="importBtn">Importer un JSON</button>
-          <input type="file" id="importFile" accept="application/json" class="hidden">
-        </div>
-        <div class="card setrow">
-          <strong>Cet appareil</strong>
-          <button class="btn danger" id="forgetBtn2">Oublier cet appareil</button>
-        </div>
+        <div class="setlead"><span class="dot" id="setDot"></span><span id="setLead">Synchronisation</span></div>
+        <details class="card setgrp" id="sg-sync">
+          <summary><span class="si">🔄</span><span class="st"><b>Synchronisation</b><span id="sumSync"></span></span></summary>
+          <div class="setbody">
+            <div class="hint" id="setInfo" style="margin:0"></div>
+            <button class="btn ghost" id="syncNow">Synchroniser maintenant</button>
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-pap">
+          <summary><span class="si">📄</span><span class="st"><b>Papiers</b><span id="sumPap"></span></span></summary>
+          <div class="setbody">
+            <div class="hint" style="margin:0">Comment un papier validé est rangé dans iCloud Drive depuis cet appareil :</div>
+            <label class="radio"><input type="radio" name="papMode" value="direct"><span>Raccourci direct <small>Automatique et par lot, avec le raccourci « Ranger mes papiers ».</small></span></label>
+            <label class="radio"><input type="radio" name="papMode" value="raccourci"><span>Raccourci par le partage <small>Un papier à la fois, raccourci « Ranger dans iCloud » dans le menu de partage.</small></span></label>
+            <label class="radio"><input type="radio" name="papMode" value="fichiers"><span>Enregistrer dans Fichiers <small>Sans raccourci : tu choisis toi-même le dossier.</small></span></label>
+            <button class="btn ghost" id="papShortcutHelp">Créer le raccourci (pas à pas)</button>
+            <details style="margin-top:4px"><summary class="meta" style="margin:0">Reprendre un plan DocClass (Mac)</summary>
+              <div class="hint">Une seule fois : fichier exporté par DocClass V2.5.2.</div>
+              <button class="btn ghost small" id="papImportBtn" style="margin-top:8px">Importer un plan DocClass (JSON)</button>
+              <input type="file" id="papImportFile" accept="application/json,.json" class="hidden">
+            </details>
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-sec">
+          <summary><span class="si">🔒</span><span class="st"><b>Sécurité</b><span id="sumSec"></span></span></summary>
+          <div class="setbody">
+            <label class="chkline" style="margin:0"><input type="checkbox" id="remToggle"> Rester connecté sur cet appareil</label>
+            <div class="hint" style="margin:0">Plus besoin du mot de passe à l'ouverture sur ce téléphone. Le cadenas en haut déconnecte l'appareil. Sinon, verrouillage après 10 min d'inactivité. Données et photos chiffrées (AES-256) avant l'envoi sur GitHub.</div>
+            <button class="btn ghost" id="chgPw">Changer le mot de passe</button>
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-rooms">
+          <summary><span class="si">🏠</span><span class="st"><b>Pièces</b><span id="sumRooms"></span></span></summary>
+          <div class="setbody">
+            <div class="hint" style="margin:0">Appuie sur une pièce pour la renommer ou la supprimer.</div>
+            <div class="chips wrapchips" id="roomsChips"></div>
+            <button class="btn ghost small" data-addlist="rooms">+ Ajouter une pièce</button>
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-cats">
+          <summary><span class="si">🏷️</span><span class="st"><b>Catégories d'objets</b><span id="sumCats"></span></span></summary>
+          <div class="setbody">
+            <div class="hint" style="margin:0">Appuie sur une catégorie pour la renommer, changer son icône ou la supprimer.</div>
+            <div class="chips wrapchips" id="catsChips"></div>
+            <button class="btn ghost small" data-addlist="cats">+ Ajouter une catégorie</button>
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-save">
+          <summary><span class="si">💾</span><span class="st"><b>Sauvegarde</b><span>Exporter ou importer tes données</span></span></summary>
+          <div class="setbody">
+            <div class="hint" style="margin:0">Copie lisible de tes données, sans les photos ni les documents. Elle n'est pas chiffrée : garde-la en lieu sûr.</div>
+            <div class="row2"><button class="btn ghost" id="exportBtn">Exporter</button><button class="btn ghost" id="importBtn">Importer</button></div>
+            <input type="file" id="importFile" accept="application/json" class="hidden">
+          </div>
+        </details>
+        <details class="card setgrp" id="sg-dev">
+          <summary><span class="si">📱</span><span class="st"><b>Cet appareil</b><span>Oublier la connexion de cet appareil</span></span></summary>
+          <div class="setbody">
+            <div class="hint" style="margin:0">Efface la connexion locale. Tes données sur GitHub ne bougent pas ; il faudra le jeton et le mot de passe pour te reconnecter.</div>
+            <button class="btn danger" id="forgetBtn2">Oublier cet appareil</button>
+          </div>
+        </details>
       </div>
     </section>
   </main>
@@ -866,6 +911,7 @@ function render(){
 
   if(tab==="items"){
     $("alertsBox").innerHTML = q ? "" : alertsHTML(al);
+    $("quickHint").classList.toggle("hidden", items.length>=3);
     const list = items.filter(i=>matches(q, itemHay(i))).sort((a,b)=> q ? byName(a,b) : (b.updatedAt||0)-(a.updatedAt||0));
     const papBlock = papSearchBlock(q);
     $("itemsList").innerHTML = (list.length ? list.map(itemCard).join("")
@@ -875,6 +921,7 @@ function render(){
 
   if(tab==="places"){
     const declared = live(S.data.places), declNames = new Set(declared.map(p=>norm(p.name)));
+    $("placesHint").classList.toggle("hidden", declared.length>=3);
     const hitItem = i => matches(q, i.name, i.notes||"");
     const hit = p => !q || matches(q, p.name, p.notes||"", placeRoom(p)) || itemsIn(p.name).some(hitItem) || descendants(p).some(d=>matches(q,d.name)||itemsIn(d.name).some(hitItem));
     const groups = {};
@@ -980,7 +1027,14 @@ function render(){
     $("remToggle").checked = isRemembered();
     $("roomsChips").innerHTML = live(S.data.rooms).sort(byName).map(r=>`<button class="chip" data-listedit="rooms:${esc(r.id)}">${esc(r.name)}</button>`).join("");
     $("catsChips").innerHTML = live(S.data.cats).sort(byName).map(c=>`<button class="chip" data-listedit="cats:${esc(c.id)}">${esc(c.icon||"📦")} ${esc(c.name)}</button>`).join("");
-    $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${items.length} objet(s), ${live(S.data.places).length} rangement(s), ${live(S.data.products).length} article(s) acheté(s)` + (S.lastSync?` · synchro ${S.lastSync.toLocaleTimeString("fr-FR")}`:"");
+    $("setInfo").textContent = `Dépôt : ${S.cfg.owner}/${S.cfg.repo} · ${plural(items.length,"objet")}, ${plural(live(S.data.places).length,"rangement")}, ${plural(live(S.data.products).length,"article")} acheté${live(S.data.products).length>1?"s":""}, ${plural(live(S.data.docs||[]).length,"papier")} au registre.`;
+    const st = $("syncTxt").textContent || "À jour";
+    $("sumSync").textContent = (S.lastSync?`Dernière synchro à ${S.lastSync.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`:"Données chiffrées sur ton GitHub privé");
+    $("setLead").textContent = `${S.cfg.owner}/${S.cfg.repo} · ${st}`; $("setDot").className = $("syncDot").className;
+    $("sumPap").textContent = {direct:"Raccourci direct (automatique, par lot)", raccourci:"Raccourci par le menu de partage", fichiers:"Enregistrer dans Fichiers"}[papMode()] || "";
+    $("sumSec").textContent = isRemembered() ? "Reste connecté sur cet appareil" : "Mot de passe à chaque ouverture";
+    $("sumRooms").textContent = plural(live(S.data.rooms).length,"pièce");
+    $("sumCats").textContent = plural(live(S.data.cats).length,"catégorie");
   }
 }
 
@@ -1054,7 +1108,7 @@ function modal(html, onReady){
 /* fiche détaillée d'un objet */
 function openDetail(it){
   const room = roomOfPlace(it.location);
-  modal(`<div class="hero" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}" data-kind="full">`:""}</div>
+  modal(`<div class="hero${it.photo?"":" nophoto"}" data-emoji="${esc(catIcon(it.category))}">${it.photo?`<img alt="" data-pid="${esc(it.photo.id)}" data-kind="full">`:""}</div>
     <h2>${esc(it.name)}</h2>
     <div class="kv">
       <div class="k">Rangement</div><div><strong>📍 ${esc(pathLabel(it.location)||"—")}</strong></div>
@@ -1576,9 +1630,11 @@ function getAlerts(){
   const rank={late:0,soon:1,ok:2};
   return out.sort((a,b)=>rank[a.lv]-rank[b.lv]);
 }
+let alertsOpen=false;
 function alertsHTML(al){
   if(!al.length) return "";
-  return `<div class="alerts"><div class="ah">À surveiller</div>${al.map(a=>`<div class="alert" data-alert="${a.kind}:${esc(a.id)}"><span class="ic lv-${a.lv}">${a.icon}</span><div style="flex:1;min-width:0"><div class="name" style="font-size:15px">${esc(a.text)}</div><div class="meta" style="margin:0">${esc(a.sub)}</div></div></div>`).join("")}</div>`;
+  const MAX=3, shown = alertsOpen ? al : al.slice(0,MAX), rest = al.length-shown.length;
+  return `<div class="alerts"><div class="ah">À surveiller · ${al.length}</div>${shown.map(a=>`<div class="alert" data-alert="${a.kind}:${esc(a.id)}"><span class="ic lv-${a.lv}">${a.icon}</span><div style="flex:1;min-width:0"><div class="name" style="font-size:15px">${esc(a.text)}</div><div class="meta" style="margin:0">${esc(a.sub)}</div></div></div>`).join("")}${rest?`<button class="more" data-alertsmore="1">Voir les ${rest} autre${rest>1?"s":""} ▾</button>`:alertsOpen&&al.length>MAX?`<button class="more" data-alertsmore="0">Réduire ▴</button>`:""}</div>`;
 }
 function statusPills(i){
   let h="";
@@ -1975,6 +2031,7 @@ const HELP = {
     ["📌","Infos : ton pense-bête (ex. poubelle cuisine → sacs 20 L). Il s'affiche aussi dans ta liste de courses."],
     ["🔴","La pastille rouge sur l'onglet Maison = tâches en retard."]]],
   settings: ["Réglages", [
+    ["›","Chaque rubrique s'ouvre d'un appui : synchronisation, papiers, sécurité, pièces, catégories, sauvegarde, cet appareil."],
     ["🏷️","Pièces et catégories : appuie pour renommer, changer l'icône ou supprimer ; « + Ajouter » pour en créer."],
     ["🔄","Synchronisation : tes données sont chiffrées puis envoyées sur ton GitHub privé. Point vert = à jour."],
     ["🔒","« Rester connecté » évite le mot de passe sur ce téléphone. Le cadenas en haut déconnecte l'appareil."],
@@ -2081,6 +2138,7 @@ document.addEventListener("click", e=>{
   if(!S.data || e.target.closest("#modalRoot")) return;
   const t = e.target;
   let el;
+  if(el=t.closest("[data-alertsmore]")){ alertsOpen = el.dataset.alertsmore==="1"; render(); return; }
   if(el=t.closest("[data-addin]")) return openItem({location:el.dataset.addin});
   if(el=t.closest("[data-place]")){ openPlaceView(placeById(el.dataset.place)); return; }
   if(el=t.closest(".place-head[data-pkey]")){ const n=placeIndex.get(el.dataset.pkey); if(n) openPlace(null, n); return; }
